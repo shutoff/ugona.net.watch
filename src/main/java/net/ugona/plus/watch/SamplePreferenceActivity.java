@@ -31,18 +31,13 @@ Copyright (c) 2011-2013, Sony Mobile Communications AB
  */
 package net.ugona.plus.watch;
 
-import android.app.AlertDialog;
-import android.app.Dialog;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
-import android.preference.Preference;
-import android.preference.Preference.OnPreferenceClickListener;
+import android.preference.ListPreference;
 import android.preference.PreferenceActivity;
-import android.util.Log;
 
 public class SamplePreferenceActivity extends PreferenceActivity {
-    private static final int DIALOG_READ_ME = 1;
 
     @SuppressWarnings("deprecation")
     @Override
@@ -52,53 +47,32 @@ public class SamplePreferenceActivity extends PreferenceActivity {
         // Load the preferences from an XML resource
         addPreferencesFromResource(R.xml.preferences);
 
-        // Handle read me
-        Preference preference = findPreference(getText(R.string.preference_key_read_me));
-        preference.setOnPreferenceClickListener(new OnPreferenceClickListener() {
-
-            @Override
-            public boolean onPreferenceClick(Preference preference) {
-                showDialog(DIALOG_READ_ME);
-                return true;
+        Uri uri = Uri.parse("content://net.ugona.plus/car");
+        Cursor c = getContentResolver().query(uri, new String[]{
+                "id",
+                "name"
+        }, null, null, null);
+        int count = c.getCount();
+        String[] entries = new String[count];
+        String[] values = new String[count];
+        if (c.moveToFirst()) {
+            count = 0;
+            int i_id = c.getColumnIndex("id");
+            int i_name = c.getColumnIndex("name");
+            for (; ; ) {
+                entries[count] = c.getString(i_id);
+                entries[count] = c.getString(i_name);
+                count++;
+                if (!c.moveToNext())
+                    break;
             }
-        });
-
-    }
-
-    @Override
-    protected Dialog onCreateDialog(int id) {
-        Dialog dialog = null;
-
-        switch (id) {
-            case DIALOG_READ_ME:
-                dialog = createReadMeDialog();
-                break;
-            default:
-                Log.w(SampleExtensionService.LOG_TAG, "Not a valid dialog id: " + id);
-                break;
         }
+        c.close();
 
-        return dialog;
-    }
+        ListPreference carPref = (ListPreference) findPreference("car");
+        carPref.setEntries(entries);
+        carPref.setEntryValues(values);
 
-    /**
-     * Create the Read me dialog
-     *
-     * @return the Dialog
-     */
-    private Dialog createReadMeDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage(R.string.preference_option_read_me_txt)
-                .setTitle(R.string.preference_option_read_me)
-                .setIcon(android.R.drawable.ic_dialog_info)
-                .setPositiveButton(android.R.string.ok, new OnClickListener() {
-
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.cancel();
-                    }
-                });
-        return builder.create();
     }
 
 }

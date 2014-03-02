@@ -33,6 +33,10 @@ Copyright (c) 2011-2013, Sony Mobile Communications AB
 package net.ugona.plus.watch;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.net.Uri;
+import android.preference.PreferenceManager;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -43,24 +47,44 @@ import com.sonyericsson.extras.liveware.extension.util.widget.SmartWatchWidgetIm
  */
 public class SmartWatchSampleWidgetImage extends SmartWatchWidgetImage {
 
-    private String mTime;
+    static final String[] fields = new String[]{
+            "VoltageMain",
+            "VoltageReserved",
+            "balance_",
+            "temperature_",
+            "TempShift"
+    };
+
+    String[] values;
 
     /**
      * Create sample widget image.
      *
      * @param context The context.
-     * @param time    The time.
      */
-    public SmartWatchSampleWidgetImage(final Context context, final String time) {
+    public SmartWatchSampleWidgetImage(final Context context) {
         super(context);
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
+        String car_id = preferences.getString("car", "");
+        Uri uri = Uri.parse("content://net.ugona.plus/car#" + car_id);
+
+        Cursor c = context.getContentResolver().query(uri, fields, null, null, null);
+        c.moveToFirst();
+        values = new String[fields.length];
+        for (int i = 0; i < fields.length; i++) {
+            int id = c.getColumnIndex(fields[i]);
+            values[i] = c.getString(id);
+        }
+        c.close();
+
         setInnerLayoutResourceId(R.layout.smart_watch_sample_widget);
-        mTime = time;
     }
 
     @Override
     protected void applyInnerLayout(LinearLayout innerLayout) {
-        // Set time
-        ((TextView) innerLayout.findViewById(R.id.smart_watch_sample_widget_time)).setText(mTime);
+        ((TextView) innerLayout.findViewById(R.id.voltage)).setText(values[0]);
+        ((TextView) innerLayout.findViewById(R.id.reserve)).setText(values[1]);
+        ((TextView) innerLayout.findViewById(R.id.balance)).setText(values[2]);
     }
 
 }

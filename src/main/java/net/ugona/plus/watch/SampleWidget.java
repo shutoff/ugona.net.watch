@@ -33,24 +33,19 @@ Copyright (c) 2011-2013, Sony Mobile Communications AB
 package net.ugona.plus.watch;
 
 import android.content.Context;
-import android.content.SharedPreferences;
-import android.content.SharedPreferences.Editor;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.preference.PreferenceManager;
 import android.text.format.DateUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 
 import com.sonyericsson.extras.liveware.aef.widget.Widget;
 import com.sonyericsson.extras.liveware.extension.util.SmartWatchConst;
 import com.sonyericsson.extras.liveware.extension.util.widget.WidgetExtension;
 
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Locale;
 
 /**
@@ -143,32 +138,9 @@ class SampleWidget extends WidgetExtension {
         }
 
         if (type == Widget.Intents.EVENT_TYPE_SHORT_TAP) {
-            // Change clock mode on short tap.
-            setClockMode24h(!isClockMode24h());
             // Update clock widget now
             updateWidget();
         }
-    }
-
-    /**
-     * Set clock format
-     *
-     * @return True if 24-h clock format, false to use 12-h am/pm
-     */
-    private boolean isClockMode24h() {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
-        return prefs.getBoolean(mContext.getString(R.string.preference_key_clock_mode), true);
-    }
-
-    /**
-     * Get clock format
-     *
-     * @param isClockMode24h True if 24-h clock format, false to use 12-h am/pm
-     */
-    private void setClockMode24h(boolean isClockMode24h) {
-        Editor editor = PreferenceManager.getDefaultSharedPreferences(mContext).edit();
-        editor.putBoolean(mContext.getString(R.string.preference_key_clock_mode), isClockMode24h);
-        editor.commit();
     }
 
     /**
@@ -186,26 +158,11 @@ class SampleWidget extends WidgetExtension {
 
     private synchronized Bitmap createSmartWatchWidgetBitmap() {
         Log.d(SampleExtensionService.LOG_TAG, "updateWidget SmartWatch");
-        // Get time
-        String time = null;
-        if (isClockMode24h()) {
-            time = TIME_FORMAT_24_H.format(new Date());
-        } else {
-            time = TIME_FORMAT_AM_PM.format(new Date());
-        }
-
-        return (new SmartWatchSampleWidgetImage(mContext, time).getBitmap());
+        return (new SmartWatchSampleWidgetImage(mContext).getBitmap());
     }
 
     private synchronized Bitmap createSmartWatch2WidgetBitmap() {
         Log.d(SampleExtensionService.LOG_TAG, "updateWidget SmartWatch 2");
-        // Get time
-        String time = null;
-        if (isClockMode24h()) {
-            time = TIME_FORMAT_24_H.format(new Date());
-        } else {
-            time = TIME_FORMAT_AM_PM.format(new Date());
-        }
 
         // Create bitmap to draw in.
         Bitmap bitmap = Bitmap.createBitmap(WIDGET_WIDTH_SMART_WATCH_2,
@@ -220,10 +177,6 @@ class SampleWidget extends WidgetExtension {
 
         LinearLayout sampleLayout = (LinearLayout) LinearLayout.inflate(mContext,
                 R.layout.smart_watch_sample_widget_2, root);
-
-        // Update the values.
-        TextView tView = (TextView) sampleLayout.findViewById(R.id.smart_watch_sample_widget_time);
-        tView.setText(time);
 
         sampleLayout.measure(WIDGET_WIDTH_SMART_WATCH_2, WIDGET_HEIGHT_SMART_WATCH_2);
         sampleLayout
