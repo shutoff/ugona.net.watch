@@ -71,10 +71,8 @@ public class NotificationWidgetExtension extends WidgetExtension {
     protected final Handler mHandler;
 
     protected final String mExtensionKey;
-
-    private EventContentObserver mEventContentObserver = null;
-
     protected NotificationWidgetEvent mLastEvent = null;
+    private EventContentObserver mEventContentObserver = null;
 
     /**
      * Create notification extension widget.

@@ -41,6 +41,7 @@ import android.text.TextUtils;
 
 import com.sonyericsson.extras.liveware.aef.notification.Notification;
 import com.sonyericsson.extras.liveware.extension.util.Dbg;
+import com.sonyericsson.extras.liveware.extension.util.registration.DeviceInfoHelper;
 
 import java.util.ArrayList;
 
@@ -646,6 +647,7 @@ public class NotificationUtil {
         if (!TextUtils.isEmpty(where)) {
             extensionWhere += " AND (" + where + ")";
         }
+        DeviceInfoHelper.removeUnsafeValues(context, values);
         return context.getContentResolver().update(Notification.Source.URI, values, extensionWhere,
                 selectionArgs);
     }

@@ -57,10 +57,8 @@ public class RegisterExtensionTask extends AsyncTask<Void, Void, Boolean> {
     private final Context mContext;
 
     private final RegistrationInformation mRegistrationInformation;
-
-    private IRegisterCallback mRegisterInterface;
-
     private final boolean mOnlySources;
+    private IRegisterCallback mRegisterInterface;
 
     /**
      * Create register extension task
@@ -193,9 +191,9 @@ public class RegisterExtensionTask extends AsyncTask<Void, Void, Boolean> {
      * @throws RegisterExtensionException
      */
     private void register() throws RegisterExtensionException {
+        ContentValues configurationValues = mRegistrationInformation
+                .getExtensionRegistrationConfiguration();
         try {
-            ContentValues configurationValues = mRegistrationInformation
-                    .getExtensionRegistrationConfiguration();
             if (!configurationValues
                     .containsKey(Registration.ExtensionColumns.NOTIFICATION_API_VERSION)) {
                 configurationValues.put(Registration.ExtensionColumns.NOTIFICATION_API_VERSION,
@@ -217,10 +215,32 @@ public class RegisterExtensionTask extends AsyncTask<Void, Void, Boolean> {
             Uri uri = mContext.getContentResolver().insert(Registration.Extension.URI,
                     configurationValues);
             if (uri == null) {
-                throw new RegisterExtensionException("failed to insert extension");
+                DeviceInfoHelper.removeUnsafeValues(mContext, 1, configurationValues);
+                uri = mContext.getContentResolver().insert(Registration.Extension.URI,
+                        configurationValues);
+                if (uri == null) {
+                    throw new RegisterExtensionException("failed to insert extension");
+                } else {
+                    Dbg.e("Extension registered updated after retry!");
+                }
             }
         } catch (SQLException exception) {
-            logAndThrow("Failed to register", exception);
+            // Registration failed, possibly due to configurationValues that
+            // don't exist in v1 registration table, remove them and retry
+            try {
+                DeviceInfoHelper.removeUnsafeValues(mContext, 1, configurationValues);
+                Uri uri = mContext.getContentResolver().insert(Registration.Extension.URI,
+                        configurationValues);
+
+                if (uri == null) {
+                    throw new RegisterExtensionException("failed to insert extension");
+                } else {
+                    Dbg.e("Extension registered updated after retry!");
+
+                }
+            } catch (SQLException e) {
+                logAndThrow("Update source failed", exception);
+            }
         } catch (SecurityException exception) {
             logAndThrow("Failed to register", exception);
         } catch (IllegalArgumentException exception) {
@@ -242,14 +262,15 @@ public class RegisterExtensionTask extends AsyncTask<Void, Void, Boolean> {
         if (Dbg.DEBUG) {
             Dbg.d("Updating existing registration.");
         }
-
         String where = Registration.ExtensionColumns.PACKAGE_NAME + " = ?";
         String[] selectionArgs = new String[]{
                 mContext.getPackageName()
         };
         try {
+            ContentValues values = mRegistrationInformation.getExtensionRegistrationConfiguration();
+            DeviceInfoHelper.removeUnsafeValues(mContext, values);
             mContext.getContentResolver().update(Registration.Extension.URI,
-                    mRegistrationInformation.getExtensionRegistrationConfiguration(), where,
+                    values, where,
                     selectionArgs);
         } catch (SQLException exception) {
             logAndThrow("Failed to update registration", exception);
@@ -312,6 +333,7 @@ public class RegisterExtensionTask extends AsyncTask<Void, Void, Boolean> {
         long sourceId = NotificationUtil.INVALID_ID;
 
         try {
+            DeviceInfoHelper.removeUnsafeValues(mContext, sourceValues);
             Uri uri = mContext.getContentResolver().insert(Notification.Source.URI, sourceValues);
             if (uri == null) {
                 throw new RegisterExtensionException("failed to insert source");
@@ -340,6 +362,7 @@ public class RegisterExtensionTask extends AsyncTask<Void, Void, Boolean> {
             throws RegisterExtensionException {
 
         try {
+            DeviceInfoHelper.removeUnsafeValues(mContext, sourceValues);
             int result = NotificationUtil.updateSources(mContext, sourceValues, BaseColumns._ID
                     + " = " + sourceId, null);
 
@@ -388,9 +411,8 @@ public class RegisterExtensionTask extends AsyncTask<Void, Void, Boolean> {
 
     /**
      * Register with all host applications that supports the extension widget
-     * and/or control requirements.
-     * <p/>
-     * This method is called from the the background
+     * and/or control requirements. This method is called from the the
+     * background
      *
      * @param widgetReceiver  The widget receiver for widget events. Null if no
      *                        widget functionality.
@@ -410,7 +432,8 @@ public class RegisterExtensionTask extends AsyncTask<Void, Void, Boolean> {
                             Registration.HostAppColumns.SENSOR_API_VERSION,
                             Registration.HostAppColumns.NOTIFICATION_API_VERSION,
                             Registration.HostAppColumns.WIDGET_REFRESH_RATE
-                    }, null, null, null);
+                    }, null, null, null
+            );
             if (cursor == null) {
                 if (Dbg.DEBUG) {
                     Dbg.e("checkHostAppRegistration: cursor==null");
@@ -433,8 +456,10 @@ public class RegisterExtensionTask extends AsyncTask<Void, Void, Boolean> {
                     .getColumnIndex(Registration.HostAppColumns.CONTROL_API_VERSION);
             int sensorApiColumnIndex = cursor
                     .getColumnIndex(Registration.HostAppColumns.SENSOR_API_VERSION);
-            int notificationApiColumnIndex = cursor.getColumnIndexOrThrow(Registration.HostAppColumns.NOTIFICATION_API_VERSION);
-            int widgetRefreshRateColumnIndex = cursor.getColumnIndexOrThrow(Registration.HostAppColumns.WIDGET_REFRESH_RATE);
+            int notificationApiColumnIndex = cursor
+                    .getColumnIndexOrThrow(Registration.HostAppColumns.NOTIFICATION_API_VERSION);
+            int widgetRefreshRateColumnIndex = cursor
+                    .getColumnIndexOrThrow(Registration.HostAppColumns.WIDGET_REFRESH_RATE);
             while (!cursor.isAfterLast()) {
                 String packageName = cursor.getString(packageColumnIndex);
                 long hostAppId = cursor.getLong(hostAppIdColumnIndex);
@@ -458,8 +483,11 @@ public class RegisterExtensionTask extends AsyncTask<Void, Void, Boolean> {
                 // If widget, control or sensor was supported then register with
                 // the host app.
                 if (widgetSupported || controlSupported || sensorSupported) {
-                    registerApiRegistration(packageName, isHostAppRegistered(packageName),
-                            widgetSupported, controlSupported, sensorSupported);
+                    registerApiRegistration(hostApplication, packageName,
+                            isHostAppRegistered(packageName), widgetSupported, controlSupported,
+                            sensorSupported,
+                            mRegistrationInformation.controlInterceptsBackButton(),
+                            mRegistrationInformation.supportsLowPowerMode());
                 }
 
                 cursor.moveToNext();
@@ -484,9 +512,8 @@ public class RegisterExtensionTask extends AsyncTask<Void, Void, Boolean> {
     }
 
     /**
-     * Checks if the extension is registered with a host application.
-     * <p/>
-     * This method is called from the the background
+     * Checks if the extension is registered with a host application. This
+     * method is called from the the background
      *
      * @param packageName The package name of the host application.
      * @return True if the extension is registered with the host application.
@@ -505,7 +532,9 @@ public class RegisterExtensionTask extends AsyncTask<Void, Void, Boolean> {
             cursor = mContext.getContentResolver().query(Registration.ApiRegistration.URI,
                     new String[]{
                             Registration.ApiRegistrationColumns.HOST_APPLICATION_PACKAGE
-                    }, selection, selectionArgs, null);
+                    },
+                    selection, selectionArgs, null
+            );
             if (cursor != null) {
                 isRegistered = (cursor.getCount() > 0);
             }
@@ -520,9 +549,8 @@ public class RegisterExtensionTask extends AsyncTask<Void, Void, Boolean> {
 
     /**
      * Register our extension with a host application. Override this to provide
-     * extension specific implementation.
-     * <p/>
-     * This method is called from the the background
+     * extension specific implementation. This method is called from the the
+     * background
      *
      * @param packageName                The package name of host application.
      * @param isRegistered               true if already registered.
@@ -530,54 +558,113 @@ public class RegisterExtensionTask extends AsyncTask<Void, Void, Boolean> {
      * @param controlApiVersionSupported True if control registration.
      * @return True if registration was successful.
      */
-    private boolean registerApiRegistration(String packageName, boolean isRegistered,
+    private boolean registerApiRegistration(HostApplicationInfo hostApplication,
+                                            String packageName, boolean isRegistered,
                                             boolean widgetApiVersionSupported, boolean controlApiVersionSupported,
-                                            boolean sensorApiVersionSupported) {
+                                            boolean sensorApiVersionSupported, boolean controlInterceptsBack,
+                                            boolean lowPowerSupport) {
         if (Dbg.DEBUG) {
             Dbg.d("Register API registration: " + packageName);
         }
         ContentValues values = new ContentValues();
         values.put(Registration.ApiRegistrationColumns.HOST_APPLICATION_PACKAGE, packageName);
         if (widgetApiVersionSupported) {
-            values.put(Registration.ApiRegistrationColumns.WIDGET_API_VERSION,
-                    mRegistrationInformation.getRequiredWidgetApiVersion());
+            // The api version inserted is based on either the supported level
+            // in host app
+            // or the target API version, whichever is lower.
+            int apiVersion = Math.min(mRegistrationInformation.getTargetWidgetApiVersion(),
+                    hostApplication.getWidgetApiVersion());
+            values.put(Registration.ApiRegistrationColumns.WIDGET_API_VERSION, apiVersion);
         } else {
             values.put(Registration.ApiRegistrationColumns.WIDGET_API_VERSION, 0);
         }
         if (controlApiVersionSupported) {
-            values.put(Registration.ApiRegistrationColumns.CONTROL_API_VERSION,
-                    mRegistrationInformation.getRequiredControlApiVersion());
+            int apiVersion = Math.min(mRegistrationInformation.getTargetControlApiVersion(),
+                    hostApplication.getControlApiVersion());
+            values.put(Registration.ApiRegistrationColumns.CONTROL_API_VERSION, apiVersion);
         } else {
             values.put(Registration.ApiRegistrationColumns.CONTROL_API_VERSION, 0);
         }
         if (sensorApiVersionSupported) {
-            values.put(Registration.ApiRegistrationColumns.SENSOR_API_VERSION,
-                    mRegistrationInformation.getRequiredSensorApiVersion());
+            int apiVersion = Math.min(mRegistrationInformation.getTargetSensorApiVersion(),
+                    hostApplication.getControlApiVersion());
+            values.put(Registration.ApiRegistrationColumns.SENSOR_API_VERSION, apiVersion);
         } else {
             values.put(Registration.ApiRegistrationColumns.SENSOR_API_VERSION, 0);
+        }
+        if (controlInterceptsBack) {
+            values.put(Registration.ApiRegistrationColumns.CONTROL_BACK_INTERCEPT,
+                    mRegistrationInformation.controlInterceptsBackButton());
+        } else {
+            values.put(Registration.ApiRegistrationColumns.CONTROL_BACK_INTERCEPT, 0);
+        }
+        if (lowPowerSupport) {
+            values.put(Registration.ApiRegistrationColumns.LOW_POWER_SUPPORT,
+                    mRegistrationInformation.supportsLowPowerMode());
+        } else {
+            values.put(Registration.ApiRegistrationColumns.LOW_POWER_SUPPORT, 0);
         }
 
         boolean res = false;
         long extensionId = ExtensionUtils.getExtensionId(mContext);
         if (!isRegistered) {
             values.put(Registration.ApiRegistrationColumns.EXTENSION_ID, extensionId);
-            Uri uri = mContext.getContentResolver()
-                    .insert(Registration.ApiRegistration.URI, values);
+            Uri uri = null;
+            try {
+
+                uri = mContext.getContentResolver()
+                        .insert(Registration.ApiRegistration.URI, values);
+
+                if (uri == null) {
+                    // It's possible the registration did nothing because of an
+                    // old
+                    // database. Let's remove all API 2 values and try again
+                    DeviceInfoHelper.removeUnsafeValues(mContext, 1, values);
+                    uri = mContext.getContentResolver()
+                            .insert(Registration.ApiRegistration.URI, values);
+                }
+            } catch (SQLException exception) {
+                // It's possible the registration failed with an exception
+                // because of an old database. Let's remove all API 2 values and
+                // try again
+                DeviceInfoHelper.removeUnsafeValues(mContext, 1, values);
+                uri = mContext.getContentResolver()
+                        .insert(Registration.ApiRegistration.URI, values);
+            }
             res = uri != null;
         } else {
             long _id = ExtensionUtils.getRegistrationId(mContext, packageName, extensionId);
-            int rows = mContext.getContentResolver().update(
-                    ContentUris.withAppendedId(Registration.ApiRegistration.URI, _id),
-                    values, null, null);
+
+            int rows = 0;
+            try {
+                rows = mContext.getContentResolver().update(
+                        ContentUris.withAppendedId(Registration.ApiRegistration.URI, _id), values,
+                        null, null);
+                if (rows == 0) {
+                    // It's possible the registration update failed because of
+                    // an old database. Let's remove all API 2 values and try again
+                    DeviceInfoHelper.removeUnsafeValues(mContext, 1, values);
+                    rows = mContext.getContentResolver().update(
+                            ContentUris.withAppendedId(Registration.ApiRegistration.URI, _id),
+                            values,
+                            null, null);
+                }
+            } catch (SQLException exception) {
+                // It's possible the registration update failed because of an
+                // old database. Let's remove all API 2 values and try again
+                DeviceInfoHelper.removeUnsafeValues(mContext, 1, values);
+                rows = mContext.getContentResolver().update(
+                        ContentUris.withAppendedId(Registration.ApiRegistration.URI, _id), values,
+                        null, null);
+            }
             res = rows > 0;
         }
         return res;
     }
 
     /**
-     * Write to log and throw exception
-     * <p/>
-     * This method is called from the the background
+     * Write to log and throw exception This method is called from the the
+     * background
      *
      * @param text      Text to write to log
      * @param exception exception to throw

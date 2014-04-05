@@ -32,11 +32,26 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package com.sonyericsson.extras.liveware.aef.sensor;
 
+import com.sonyericsson.extras.liveware.aef.registration.Registration;
+
 /**
  * <h1>Sensor API is a part of the Smart Extension APIs</h1>
  * <h3>Overview</h3>
+ * <p>
  * The Sensor API is used to send accessory sensor data from a host application to
- * an accessory extension. The API can be used by any registered extension.
+ * an accessory extension.
+ * </p>
+ * <p>
+ * When a host application registers its capabilities, it will declare if it supports
+ * the Sensor API and what sensors it exposes.
+ * Extensions can use the Registration and Capability API to query host
+ * applications for supported sensors.
+ * </p>
+ * <p>
+ * In order to use this API, an application must have registered itself properly in
+ * the registration content provider, see the Registration and Capabilities API.
+ * </p>
+ * <h3>How to register a listener</h3>
  * <p>
  * Sensor data is sent over a LocalSocket. In order to start communication the extension
  * should setup a LocalServerSocket {@link android.net.LocalServerSocket}
@@ -44,22 +59,58 @@ package com.sonyericsson.extras.liveware.aef.sensor;
  * The capability API can be used to query the host application for supported sensors.
  * If multiple sensors are used, multiple LocalServerSocket objects must also be used since
  * one sensor is bound to exactly one LocalServerSocket.
+ * When a extension registers a listener it also specifies what sample rate it wants to have.
+ * </p>
+ * <p>
+ * Some sensors support interrupt mode.
+ * They can be configured to only send sensor data when new values are available.
+ * The interrupt flag is part of the sensor data registration Intent.
+ * </p>
+ * <p>
+ * To unregister a listener the extension must send the {@link Intents#SENSOR_UNREGISTER_LISTENER_INTENT}.
  * </p>
  * <h3>Sensor data format</h3>
+ * <p>
  * The sensor data is sent from the host application over a LocalSocket and can be accessed
  * through an InputStream.
  * The data has the following format:
- * <ol>
+ * <ul>
  * <li>Byte  0 -  3   Total length of the data package</li>
  * <li>Byte  4 -  7   Accuracy. For more information see {@link SensorAccuracy}</li>
  * <li>Byte  8 - 15   Timestamp. The time in nanosecond at which the event happened</li>
  * <li>Byte 16 - 19   Length of sensor values in bytes</li>
- * <li>Byte 20 - nn   Sensor values. This should be interpreted as an array of float values, each float value is 4 bytes long</li>
- * </ol>
+ * <li>Byte 20 - nn   Sensor values. This should be interpreted as an array of float values, each float value is 4 bytes</li>
+ * </ul>
  * The length and contents of the values array depends on which sensor type is being monitored.
+ * The data format is identical to a standard Android <a href="http://developer.android.com/reference/android/hardware/SensorEvent.html#values">SensorEvent</a>.
+ * </p>
  */
 
 public class Sensor {
+
+    /**
+     * Constant defining the sensor type Accelerometer.
+     * Sensor data is sent as an array of 3 float values representing
+     * the acceleration on the x-axis, y-axis and z-axis respectively.
+     * All values are in SI units (m/s^2)
+     * For more information about the accelerometer sensor type,
+     * see {@link android.hardware.Sensor#TYPE_ACCELEROMETER}
+     *
+     * @see Registration.SensorTypeValue#ACCELEROMETER
+     * @deprecated
+     */
+    public static final String SENSOR_TYPE_ACCELEROMETER = Registration.SensorTypeValue.ACCELEROMETER;
+    /**
+     * Constant defining the sensor type Light.
+     * Sensor data is sent as one float value representing
+     * the light level in SI lux units.
+     * For more information about the light sensor type,
+     * see {@link android.hardware.Sensor#TYPE_LIGHT}
+     *
+     * @see Registration.SensorTypeValue#LIGHT
+     * @deprecated
+     */
+    public static final String SENSOR_TYPE_LIGHT = Registration.SensorTypeValue.LIGHT;
 
     /**
      * @hide This class is only intended as a utility class containing declared constants
@@ -320,23 +371,4 @@ public class Sensor {
          */
         static final int SENSOR_ERROR_CODE_NOT_ALLOWED = 0;
     }
-
-    /**
-     * Constant defining the sensor type Accelerometer.
-     * Sensor data is sent as an array of 3 float values representing
-     * the acceleration on the x-axis, y-axis and z-axis respectively.
-     * All values are in SI units (m/s^2)
-     * For more information about the accelerometer sensor type,
-     * see {@link android.hardware.Sensor#TYPE_ACCELEROMETER}
-     */
-    public static final String SENSOR_TYPE_ACCELEROMETER = "Accelerometer";
-
-    /**
-     * Constant defining the sensor type Light.
-     * Sensor data is sent as one float value representing
-     * the light level in SI lux units.
-     * For more information about the light sensor type,
-     * see {@link android.hardware.Sensor#TYPE_LIGHT}
-     */
-    public static final String SENSOR_TYPE_LIGHT = "Light";
 }

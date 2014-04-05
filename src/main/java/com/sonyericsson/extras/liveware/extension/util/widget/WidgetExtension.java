@@ -6,14 +6,14 @@ All rights reserved.
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
 
-* Redistributions of source code must retain the above copyright notice, this
+ * Redistributions of source code must retain the above copyright notice, this
   list of conditions and the following disclaimer.
 
-* Redistributions in binary form must reproduce the above copyright notice,
+ * Redistributions in binary form must reproduce the above copyright notice,
   this list of conditions and the following disclaimer in the documentation
   and/or other materials provided with the distribution.
 
-* Neither the name of the Sony Ericsson Mobile Communications AB nor the names
+ * Neither the name of the Sony Ericsson Mobile Communications AB nor the names
   of its contributors may be used to endorse or promote products derived from
   this software without specific prior written permission.
 
@@ -27,7 +27,7 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */
 
 package com.sonyericsson.extras.liveware.extension.util.widget;
 
@@ -42,6 +42,8 @@ import android.os.Bundle;
 
 import com.sonyericsson.extras.liveware.aef.registration.Registration;
 import com.sonyericsson.extras.liveware.aef.widget.Widget;
+import com.sonyericsson.extras.liveware.extension.util.Dbg;
+import com.sonyericsson.extras.liveware.extension.util.ExtensionUtils;
 
 import java.io.ByteArrayOutputStream;
 
@@ -50,13 +52,11 @@ import java.io.ByteArrayOutputStream;
  */
 public abstract class WidgetExtension {
 
-    private boolean mStarted = false;
-
+    public static final String SCHEDULED_REFRESH_INTENT = "com.sonyericsson.extras.liveware.extension.util.widget.scheduled.refresh";
     protected final Context mContext;
 
     protected final String mHostAppPackageName;
-
-    public static final String SCHEDULED_REFRESH_INTENT = "com.sonyericsson.extras.liveware.extension.util.widget.scheduled.refresh";
+    private boolean mStarted = false;
 
     /**
      * Create widget extension.
@@ -114,10 +114,9 @@ public abstract class WidgetExtension {
     public abstract void onStopRefresh();
 
     /**
-     * Override this method to take action on scheduled refresh.
-     * <p/>
-     * Example of how to schedule a refresh every 10th second in
-     * {@link #onStartRefresh()} and cancel it in {@link #onStopRefresh()}
+     * Override this method to take action on scheduled refresh. Example of how
+     * to schedule a refresh every 10th second in {@link #onStartRefresh()} and
+     * cancel it in {@link #onStopRefresh()}
      * <p/>
      * <pre>
      * public void startRefresh() {
@@ -155,7 +154,8 @@ public abstract class WidgetExtension {
         intent.putExtra(Widget.Intents.EXTRA_EXTENSION_KEY, extensionKey);
         intent.putExtra(Widget.Intents.EXTRA_AHA_PACKAGE_NAME, mHostAppPackageName);
         intent.setPackage(mContext.getPackageName());
-        PendingIntent pi = PendingIntent.getBroadcast(mContext, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+        PendingIntent pi = PendingIntent.getBroadcast(mContext, 0, intent,
+                PendingIntent.FLAG_CANCEL_CURRENT);
         return pi;
     }
 
@@ -234,6 +234,16 @@ public abstract class WidgetExtension {
     }
 
     /**
+     * Called when an object click event has occurred.
+     *
+     * @param type            The type of click event
+     * @param layoutReference The referenced layout object
+     */
+    public void onObjectClick(final int type, final int layoutReference) {
+
+    }
+
+    /**
      * Sends an image to the host application.
      *
      * @param resourceId The image resource id.
@@ -275,6 +285,49 @@ public abstract class WidgetExtension {
         Intent intent = new Intent(Widget.Intents.WIDGET_IMAGE_UPDATE_INTENT);
         intent.putExtra(Widget.Intents.EXTRA_WIDGET_IMAGE_DATA, outputStream.toByteArray());
 
+        sendToHostApp(intent);
+    }
+
+    /**
+     * Show a layout on the accessory.
+     *
+     * @param layoutId   The layout resource id.
+     * @param layoutData The layout data.
+     */
+    protected void showLayout(final int layoutId) {
+        Intent intent = new Intent(Widget.Intents.WIDGET_PROCESS_LAYOUT_INTENT);
+        intent.putExtra(Widget.Intents.EXTRA_DATA_XML_LAYOUT, layoutId);
+        sendToHostApp(intent);
+    }
+
+    /**
+     * Update an image in a specific layout, on the accessory.
+     *
+     * @param layoutReference The referenced resource within the current layout.
+     * @param resourceId      The image resource id.
+     */
+    protected void sendImage(final int layoutReference, final int resourceId) {
+        if (Dbg.DEBUG) {
+            Dbg.d("sendImage");
+        }
+
+        Intent intent = new Intent(Widget.Intents.WIDGET_SEND_IMAGE_INTENT);
+        intent.putExtra(Widget.Intents.EXTRA_LAYOUT_REFERENCE, layoutReference);
+        intent.putExtra(Widget.Intents.EXTRA_WIDGET_IMAGE_URI,
+                ExtensionUtils.getUriString(mContext, resourceId));
+        sendToHostApp(intent);
+    }
+
+    /**
+     * Update a TextView in a specific layout, on the accessory.
+     *
+     * @param layoutReference The referenced resource within the current layout.
+     * @param text            The text to be updated.
+     */
+    protected void sendText(final int layoutReference, final String text) {
+        Intent intent = new Intent(Widget.Intents.WIDGET_SEND_TEXT_INTENT);
+        intent.putExtra(Widget.Intents.EXTRA_LAYOUT_REFERENCE, layoutReference);
+        intent.putExtra(Widget.Intents.EXTRA_WIDGET_TEXT, text);
         sendToHostApp(intent);
     }
 

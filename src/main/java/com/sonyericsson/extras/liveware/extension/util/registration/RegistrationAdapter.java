@@ -52,12 +52,16 @@ public class RegistrationAdapter {
      */
     public static HostApplicationInfo getHostApplication(final Context context,
                                                          final String packageName) {
+        if (packageName == null) {
+            return null;
+        }
         Cursor cursor = null;
         try {
             cursor = context.getContentResolver().query(HostApp.URI, null,
                     HostAppColumns.PACKAGE_NAME + " = ?", new String[]{
-                    packageName
-            }, null);
+                            packageName
+                    }, null
+            );
             if (cursor != null && cursor.moveToFirst()) {
                 long id = cursor.getLong(cursor.getColumnIndexOrThrow(HostAppColumns._ID));
                 int widgetApiVersion = cursor.getInt(cursor

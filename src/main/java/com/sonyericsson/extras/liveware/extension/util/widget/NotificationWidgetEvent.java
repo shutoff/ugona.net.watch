@@ -44,25 +44,16 @@ import com.sonyericsson.extras.liveware.extension.util.ExtensionUtils;
  * database.
  */
 public class NotificationWidgetEvent {
-    protected String mName = null;
-
-    protected String mTitle = null;
-
-    protected String mMessage = null;
-
-    protected long mTime = 0L;
-
-    protected int mCount = 0;
-
-    protected long mSourceId = 0;
-
-    protected String mContactReference = null;
-
-    protected String mProfileImageUri = null;
-
-    protected String mFriendKey = null;
-
     protected final Context mContext;
+    protected String mName = null;
+    protected String mTitle = null;
+    protected String mMessage = null;
+    protected long mTime = 0L;
+    protected int mCount = 0;
+    protected long mSourceId = 0;
+    protected String mContactReference = null;
+    protected String mProfileImageUri = null;
+    protected String mFriendKey = null;
 
     /**
      * Create notification widget event.
@@ -177,24 +168,6 @@ public class NotificationWidgetEvent {
     }
 
     /**
-     * Set the name.
-     *
-     * @param name The name.
-     */
-    public void setName(String name) {
-        mName = name;
-    }
-
-    /**
-     * Set the title.
-     *
-     * @param title The title.
-     */
-    public void setTitle(String title) {
-        mTitle = title;
-    }
-
-    /**
      * Set the message.
      *
      * @param message The message.
@@ -268,6 +241,15 @@ public class NotificationWidgetEvent {
     }
 
     /**
+     * Set the name.
+     *
+     * @param name The name.
+     */
+    public void setName(String name) {
+        mName = name;
+    }
+
+    /**
      * Get the title.
      *
      * @return The title.
@@ -279,6 +261,15 @@ public class NotificationWidgetEvent {
         } else {
             return mMessage;
         }
+    }
+
+    /**
+     * Set the title.
+     *
+     * @param title The title.
+     */
+    public void setTitle(String title) {
+        mTitle = title;
     }
 
     /**

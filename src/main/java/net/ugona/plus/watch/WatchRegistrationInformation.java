@@ -39,16 +39,19 @@ import com.sonyericsson.extras.liveware.aef.registration.Registration;
 import com.sonyericsson.extras.liveware.extension.util.ExtensionUtils;
 import com.sonyericsson.extras.liveware.extension.util.registration.RegistrationInformation;
 
-public class SampleRegistrationInformation extends RegistrationInformation {
+/**
+ * Provides information needed during extension registration
+ */
+public class WatchRegistrationInformation extends RegistrationInformation {
 
     final Context mContext;
 
     /**
-     * Create registration object
+     * Create control registration object
      *
      * @param context The context
      */
-    protected SampleRegistrationInformation(Context context) {
+    protected WatchRegistrationInformation(Context context) {
         if (context == null) {
             throw new IllegalArgumentException("context == null");
         }
@@ -56,8 +59,23 @@ public class SampleRegistrationInformation extends RegistrationInformation {
     }
 
     @Override
-    public int getRequiredWidgetApiVersion() {
+    public int getRequiredControlApiVersion() {
         return 1;
+    }
+
+    /*
+     * (non-Javadoc)
+     * @see com.sonyericsson.extras.liveware.extension.util.registration.
+     * WatchRegistrationInformation#getTargetControlApiVersion()
+     */
+    @Override
+    public int getTargetControlApiVersion() {
+        return 2;
+    }
+
+    @Override
+    public int getRequiredSensorApiVersion() {
+        return 0;
     }
 
     @Override
@@ -66,54 +84,49 @@ public class SampleRegistrationInformation extends RegistrationInformation {
     }
 
     @Override
-    public int getRequiredControlApiVersion() {
-        return 0;
-    }
-
-    @Override
-    public int getRequiredSensorApiVersion() {
+    public int getRequiredWidgetApiVersion() {
         return 0;
     }
 
     /**
-     * Checks if the widget size is supported.
+     * Get the extension registration information.
      *
-     * @param width  The widget width.
-     * @param height The widget height.
-     * @return True if the widget size is supported.
+     * @return The registration configuration.
      */
     @Override
-    public boolean isWidgetSizeSupported(final int width, final int height) {
-        return (width == SampleWidget.WIDGET_WIDTH_SMARTWATCH && height == SampleWidget.WIDGET_HEIGHT_SMARTWATCH)
-                ||
-                (width == SampleWidget.WIDGET_WIDTH_SMART_WATCH_2 && height ==
-                        SampleWidget.WIDGET_HEIGHT_SMART_WATCH_2);
-    }
-
-    @Override
     public ContentValues getExtensionRegistrationConfiguration() {
-        String iconHostapp = ExtensionUtils.getUriString(mContext,
-                R.drawable.icon);
-        String iconExtension = ExtensionUtils.getUriString(mContext,
-                R.drawable.icon_extension);
+        String iconHostapp = ExtensionUtils.getUriString(mContext, R.drawable.icon);
+        String iconExtension = ExtensionUtils
+                .getUriString(mContext, R.drawable.icon_extension);
+        String iconExtension48 = ExtensionUtils
+                .getUriString(mContext, R.drawable.icon_extension48);
+        String iconExtensionBw = ExtensionUtils.getUriString(mContext,
+                R.drawable.icn_18x18_black_white_sample_control);
 
         ContentValues values = new ContentValues();
 
         values.put(Registration.ExtensionColumns.CONFIGURATION_ACTIVITY,
-                SamplePreferenceActivity.class.getName());
+                WatchPreferenceActivity.class.getName());
         values.put(Registration.ExtensionColumns.CONFIGURATION_TEXT,
                 mContext.getString(R.string.configuration_text));
-        values.put(Registration.ExtensionColumns.NAME,
-                mContext.getString(R.string.extension_name));
+        values.put(Registration.ExtensionColumns.NAME, mContext.getString(R.string.extension_name));
         values.put(Registration.ExtensionColumns.EXTENSION_KEY,
-                SampleExtensionService.EXTENSION_KEY);
+                ExtensionService.EXTENSION_KEY);
         values.put(Registration.ExtensionColumns.HOST_APP_ICON_URI, iconHostapp);
         values.put(Registration.ExtensionColumns.EXTENSION_ICON_URI, iconExtension);
+        values.put(Registration.ExtensionColumns.EXTENSION_48PX_ICON_URI, iconExtension48);
+        values.put(Registration.ExtensionColumns.EXTENSION_ICON_URI_BLACK_WHITE, iconExtensionBw);
         values.put(Registration.ExtensionColumns.NOTIFICATION_API_VERSION,
                 getRequiredNotificationApiVersion());
         values.put(Registration.ExtensionColumns.PACKAGE_NAME, mContext.getPackageName());
 
         return values;
+    }
+
+    @Override
+    public boolean isDisplaySizeSupported(int width, int height) {
+        return ((width == ControlSmartWatch2.getSupportedControlWidth(mContext) && height == ControlSmartWatch2.getSupportedControlHeight(mContext))
+                || (width == ControlSmartWatch.getSupportedControlWidth(mContext) && height == ControlSmartWatch.getSupportedControlHeight(mContext)));
     }
 
 }

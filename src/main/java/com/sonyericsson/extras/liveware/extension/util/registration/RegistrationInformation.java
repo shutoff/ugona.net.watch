@@ -68,11 +68,9 @@ public abstract class RegistrationInformation {
     public abstract ContentValues getExtensionRegistrationConfiguration();
 
     /**
-     * Get all source registration configurations.
-     * <p/>
-     * The extensions specific id must be set if there are more than one source.
-     * <p/>
-     * Override this method if this is a notification extension
+     * Get all source registration configurations. The extensions specific id
+     * must be set if there are more than one source. Override this method if
+     * this is a notification extension
      *
      * @param extensionSpecificId The extension specific id.
      * @return The source registration information.
@@ -108,6 +106,19 @@ public abstract class RegistrationInformation {
     abstract public int getRequiredWidgetApiVersion();
 
     /**
+     * Get the target widget API version
+     *
+     * @return Required API widget version, or 0 if not supporting widget.
+     * Returns required widget API version by default.
+     * @see #isWidgetSizeSupported
+     * @see ExtensionService#createWidgetExtension
+     * @see Registration.ApiRegistrationColumns#WIDGET_API_VERSION
+     */
+    public int getTargetWidgetApiVersion() {
+        return getRequiredWidgetApiVersion();
+    }
+
+    /**
      * Checks if the display size is supported.
      *
      * @param width  The display width.
@@ -131,6 +142,19 @@ public abstract class RegistrationInformation {
     abstract public int getRequiredControlApiVersion();
 
     /**
+     * Get the target control API version
+     *
+     * @return Required API control version, or 0 if not supporting control.
+     * Returns required control API version by default.
+     * @see #isDisplaySizeSupported
+     * @see ExtensionService#createControlExtension
+     * @see Registration.ApiRegistrationColumns#CONTROL_API_VERSION
+     */
+    public int getTargetControlApiVersion() {
+        return getRequiredControlApiVersion();
+    }
+
+    /**
      * Check if the sensor is supported.
      *
      * @param sensor The sensor.
@@ -152,6 +176,38 @@ public abstract class RegistrationInformation {
     abstract public int getRequiredSensorApiVersion();
 
     /**
+     * Get the target sensor API version
+     *
+     * @return Target API sensor version, or 0 if not supporting sensor. Returns
+     * required sensor API version by default.
+     * @see #isDisplaySizeSupported
+     * @see #getRequiredSensorApiVersion()
+     * @see Registration.ApiRegistrationColumns#SENSOR_API_VERSION
+     */
+    public int getTargetSensorApiVersion() {
+        return getRequiredSensorApiVersion();
+    }
+
+    /**
+     * Return true if low power mode is supported by the control extension.
+     *
+     * @return True if low power mode is supported
+     */
+    public boolean supportsLowPowerMode() {
+        return false;
+    }
+
+    /**
+     * Return true if the control extension wants to intercept the back button
+     * of the connected accessory
+     *
+     * @return True if extension wants to intercept back button
+     */
+    public boolean controlInterceptsBackButton() {
+        return false;
+    }
+
+    /**
      * Return true if the sources shall be updated when the extension service is
      * created. This might be handy if the extension use dynamic sources and the
      * source can change when the extension service is not running.
@@ -165,10 +221,8 @@ public abstract class RegistrationInformation {
 
     /**
      * Check if widget shall be supported for this host application by checking
-     * that the host application has device with a supported widget size.
-     * <p/>
-     * This method can be override to provide extension specific
-     * implementations.
+     * that the host application has device with a supported widget size. This
+     * method can be override to provide extension specific implementations.
      *
      * @param context         The context.
      * @param hostApplication The host application.
@@ -202,10 +256,8 @@ public abstract class RegistrationInformation {
 
     /**
      * Check if sensor shall be supported for this host application by checking
-     * if the host application has at least one supported sensor.
-     * <p/>
-     * This method can be override to provide extension specific
-     * implementations.
+     * if the host application has at least one supported sensor. This method
+     * can be override to provide extension specific implementations.
      *
      * @param context         The context.
      * @param hostApplication The host application.
@@ -241,7 +293,6 @@ public abstract class RegistrationInformation {
     /**
      * Check if control shall be supported for this host application by checking
      * that the host application has a device with a supported display size.
-     * <p/>
      * This method can be override to provide extension specific
      * implementations.
      *

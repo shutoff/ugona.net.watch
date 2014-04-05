@@ -339,6 +339,27 @@ public class AccessorySensor {
     }
 
     /**
+     * Decodes data from the socket
+     *
+     * @param inStream The data stream
+     * @return The sensor event.
+     */
+    private AccessorySensorEvent decodeSensorData(DataInputStream inStream) throws IOException {
+        int totalLength = inStream.readInt();
+        if (totalLength == 0) {
+            return null;
+        }
+        int accuracy = inStream.readInt();
+        long timestamp = inStream.readLong();
+        int sensorValueCount = inStream.readInt();
+        float[] sensorValues = new float[sensorValueCount];
+        for (int i = 0; i < sensorValueCount; i++) {
+            sensorValues[i] = inStream.readFloat();
+        }
+        return new AccessorySensorEvent(accuracy, timestamp, sensorValues);
+    }
+
+    /**
      * Provides a thread which can read from the socket
      */
     private class ServerThread extends Thread {
@@ -372,26 +393,5 @@ public class AccessorySensor {
                 }
             }
         }
-    }
-
-    /**
-     * Decodes data from the socket
-     *
-     * @param inStream The data stream
-     * @return The sensor event.
-     */
-    private AccessorySensorEvent decodeSensorData(DataInputStream inStream) throws IOException {
-        int totalLength = inStream.readInt();
-        if (totalLength == 0) {
-            return null;
-        }
-        int accuracy = inStream.readInt();
-        long timestamp = inStream.readLong();
-        int sensorValueCount = inStream.readInt();
-        float[] sensorValues = new float[sensorValueCount];
-        for (int i = 0; i < sensorValueCount; i++) {
-            sensorValues[i] = inStream.readFloat();
-        }
-        return new AccessorySensorEvent(accuracy, timestamp, sensorValues);
     }
 }

@@ -18,6 +18,10 @@ modification, are permitted provided that the following conditions are met:
   of its contributors may be used to endorse or promote products derived from
   this software without specific prior written permission.
 
+* Neither the name of the Sony Mobile Communications AB nor the names
+  of its contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,9 +36,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 package com.sonyericsson.extras.liveware.aef.control;
 
+import com.sonyericsson.extras.liveware.aef.registration.Registration;
+import com.sonyericsson.extras.liveware.aef.registration.Registration.DeviceColumns;
+
 
 /**
- * <h1>Control API is a part of the Smart Extension API's</h1>
+ * <h1>Control API is a part of the Smart Extension APIs</h1>
  * <p>
  * Some of our Smart accessories will support the Control API.
  * The Control API enables the Extension to take total control of the accessory.
@@ -56,7 +63,7 @@ package com.sonyericsson.extras.liveware.aef.control;
  * <a name="Registration"></a>
  * <h3>Registration</h3>
  * <p>
- * Before an Control Extension can use an accessory, it must use the registration API
+ * Before a Control Extension can use an accessory, it must use the registration API
  * content provider to insert a record in the extension table. It must also register
  * information in the registration table. This must be done for each Host Application
  * that the Extension wants to interact with.
@@ -69,7 +76,7 @@ package com.sonyericsson.extras.liveware.aef.control;
  * <h3>Extension lifecycle</h3>
  * <p>
  * After a successful registration the Extension can start communicating with the Host
- * Application. Since a Extension implementing this API takes complete control over the
+ * Application. Since an Extension implementing this API takes complete control over the
  * accessory only one Extension can run at a time.
  * </p>
  * <p>
@@ -156,6 +163,47 @@ package com.sonyericsson.extras.liveware.aef.control;
  * Note that when in "Auto" mode, the Extension will receive a {@link Intents#CONTROL_PAUSE_INTENT} when
  * display is off and a {@link Intents#CONTROL_RESUME_INTENT} when the display goes back on.
  * </p>
+ * <h4>Active power save mode</h4>
+ * <p>
+ * Some accessories may support an additional display mode where information can be shown to the
+ * user while keeping the battery consumption to a minimum. In this active power save mode the
+ * display only supports monochrome (black and white) display content.
+ * Accessories with support for active power save mode indicates this in
+ * {@link Registration.DisplayColumns#SUPPORTS_LOW_POWER_MODE}.
+ * If the control extension wants use the active power save mode it must set the
+ * {@link Registration.ApiRegistration#LOW_POWER_SUPPORT} to TRUE when registering with a Host
+ * Application.
+ * </p>
+ * <p>
+ * If both the extension and the accessory support active power save mode, this mode will be
+ * activated when the screen would otherwise go off.
+ * This means that if screen state is {@link Intents#SCREEN_STATE_AUTO} the accessory will decide when to
+ * enter active power save mode.
+ * If screen state is {@link Intents#SCREEN_STATE_ON} or {@link Intents#SCREEN_STATE_DIM} the
+ * extension can put the display in active power save mode by setting the screen state to
+ * {@link Intents#SCREEN_STATE_OFF}.
+ * The {@link Intents#CONTROL_ACTIVE_POWER_SAVE_MODE_STATUS_CHANGED_INTENT} intent is sent to the
+ * extension when the display enters active power save mode both when the active power save
+ * mode is initiated by the accessory and extension.
+ * When in active power save mode the extension is expected to provide monochrome display
+ * content through the same intents as in normal display mode.
+ * The extension can update the display in the same ways as in normal display mode.
+ * </p>
+ * <p>
+ * If the screen state is {@link Intents#SCREEN_STATE_AUTO} and the display was put in active
+ * power save mode by the accessory, the accessory also decides when to leave the active
+ * power save mode.
+ * In this mode the extension will not receive any input events from the accessory as these
+ * will cause the display to leave the active power save mode.
+ * If the display was put in active power save mode by the control extension it is the
+ * responsibility of the control extension to decide when to leave the active power save mode
+ * by setting the screen state to {@link Intents#SCREEN_STATE_ON}.
+ * If the extension wants to get input events when the screen is in active power save mode, it must
+ * manually put the display in active power save mode.
+ * When the display leaves the active power save mode a
+ * {@link Intents#CONTROL_ACTIVE_POWER_SAVE_MODE_STATUS_CHANGED_INTENT} will always be sent to
+ * the extension and the extension is expected by update the display with new content.
+ * </p>
  * <a name="LEDControl"></a>
  * <h3>Controlling the LEDs</h3>
  * <p>
@@ -198,6 +246,24 @@ package com.sonyericsson.extras.liveware.aef.control;
  * Registration &amp; Capabilities API. The {@link Intents#CONTROL_TOUCH_EVENT_INTENT} is sent to the
  * Extension when a user taps the accessory display.
  * </p>
+ * <p>
+ * If the {@link Intents#CONTROL_DISPLAY_DATA_INTENT} is used to send images, then touch events with
+ * display coordinates are delivered in the {@link Intents#CONTROL_TOUCH_EVENT_INTENT} intents.
+ * If a swipe gesture is detected then a {@link Intents#CONTROL_SWIPE_EVENT_INTENT} is sent to the
+ * Extension instead.
+ * </p>
+ * <p>
+ * If the {@link Intents#CONTROL_PROCESS_LAYOUT_INTENT} is used to send layouts then some Views
+ * in the layout may handle the touch events themselves.
+ * Touch events are for example handled by views that have android:clickable set to to true.
+ * For these views the extension is informed about clicks through the
+ * {@link Intents#CONTROL_OBJECT_CLICK_EVENT_INTENT} intent.
+ * ListViews also handle touch event and report clicks in {@link Intents#CONTROL_LIST_ITEM_CLICK_INTENT}
+ * intents.
+ * Touch events and swipe gestures that are not handled by Views in the layout are sent to the
+ * Extension through {@link Intents#CONTROL_TOUCH_EVENT_INTENT} and
+ * {@link Intents#CONTROL_SWIPE_EVENT_INTENT} intents.
+ * </p>
  * <a name="DataSending"></a>
  * <h3>Displaying content on the accessory display</h3>
  * <p>
@@ -206,13 +272,64 @@ package com.sonyericsson.extras.liveware.aef.control;
  * be displayed on the accessory display. To find out the dimensions of the display and the color depth
  * it supports the Extension can use the Registration &amp; Capabilities API. The
  * {@link Intents#CONTROL_DISPLAY_DATA_INTENT} is sent from the Extension when it wants to update the accessory
- * display. Extensions can also clear the accessory display at any point if they wants to by sending
+ * display. Extensions can also clear the accessory display at any point if they want to by sending
  * the {@link Intents#CONTROL_CLEAR_DISPLAY_INTENT}.
  * </p>
  * <p>
  * The Extension can send images as raw data (byte array) or it can just send the URI of the image to
  * be displayed. Note that we are using Bluetooth as bearer which means that we can't send that many
  * frames per second (FPS). Refresh rate of the display can be found in the Registration &amp; Capabilities API.
+ * </p>
+ * <a name="Layouts"/>
+ * <h3>Layouts</h3>
+ * <p>
+ * Starting with version 2 of the Control API it is possible to send layouts to the accessory as an
+ * alternative to sending images.
+ * The subset of Android layouts that are supported is specified in {@link Intents#EXTRA_DATA_XML_LAYOUT}.
+ * Layouts are sent using {@link Intents#CONTROL_PROCESS_LAYOUT_INTENT}.
+ * The contents of the views in the layouts can be updated using {@link Intents#CONTROL_SEND_IMAGE_INTENT}
+ * and {@link Intents#CONTROL_SEND_TEXT_INTENT}.
+ * When using layouts, click events are delivered as {@link Intents#CONTROL_OBJECT_CLICK_EVENT_INTENT} intents.
+ * </p>
+ * <a name="Lists"/>
+ * <h4>Lists</h4>
+ * <p>
+ * A layout may include a ListView.
+ * The ListView is initiated by sending a {@link Intents#CONTROL_LIST_COUNT_INTENT}.
+ * This intent can include the list items in the {@link Intents#EXTRA_LIST_CONTENT}.
+ * If no {@link Intents#EXTRA_LIST_CONTENT} is provided the Host Application will request
+ * individual list items when needed through {@link Intents#CONTROL_LIST_REQUEST_ITEM_INTENT}.
+ * The Control extension can refresh the list content at any time by sending a new
+ * {@link Intents#CONTROL_LIST_COUNT_INTENT} intent.
+ * This can be done both if additional items should be added or just if the existing items
+ * should be refreshed.
+ * The Control extension is notified about clicks on list items through the
+ * {@link Intents#CONTROL_LIST_ITEM_CLICK_INTENT} intent.
+ * </p>
+ * <p>
+ * A ListView and its items must always fill the entire display width.
+ * The height of a list item must be less or equal to the height of the ListView.
+ * </p>
+ * <p>
+ * Some lists may support a user initiated refresh.
+ * The {@link Intents#CONTROL_LIST_REFRESH_REQUEST_INTENT} is sent to the extension if
+ * the user performs a manual refresh action.
+ * The extension is expected to check its data source (for example trigger a poll to a server)
+ * and update the list content.
+ * If the number of items is changed a new {@link Intents#CONTROL_LIST_COUNT_INTENT} should be sent.
+ * If only the existing list items should be updated this is done through a number of
+ * {@link Intents#CONTROL_LIST_ITEM_INTENT} intents.
+ * </p>
+ * <a name="Gallery"/>
+ * <h4>Gallery</h4>
+ * <p>
+ * The Control extension interacts with the Gallery view in the same way as the ListView with the
+ * addition that it is also notified about selected list items through the
+ * {@link Intents#CONTROL_LIST_ITEM_SELECTED_INTENT} intent.
+ * </p>
+ * <p>
+ * A Gallery and its items must always fill the entire display width.
+ * The height of a list item must be less or equal to the height of the Gallery.
  * </p>
  */
 
@@ -394,7 +511,7 @@ public class Control {
 
         /**
          * Intent sent by the Extension when it wants to stop an ongoing LED sequence on the accessory.
-         * If the LED specified in the Intent-extra if off this Intent will be ignored by the Host Application.
+         * If the LED specified in the Intent-extra if off, this Intent will be ignored by the Host Application.
          * <p>
          * This intent should be sent with enforced security by supplying the host application permission
          * to sendBroadcast(Intent, String). {@link com.sonyericsson.extras.liveware.aef.registration.Registration#HOSTAPP_PERMISSION}
@@ -437,7 +554,7 @@ public class Control {
 
         /**
          * Intent sent by the Extension when it wants to stop an ongoing vibration on the accessory.
-         * If no vibration is ongoing this Intent will be ignored by the Host Application.
+         * If no vibration is ongoing, this Intent will be ignored by the Host Application.
          * <p>
          * This intent should be sent with enforced security by supplying the host application permission
          * to sendBroadcast(Intent, String). {@link com.sonyericsson.extras.liveware.aef.registration.Registration#HOSTAPP_PERMISSION}
@@ -457,6 +574,15 @@ public class Control {
          * Intent sent by the Extension whenever it wants to update the accessory display.
          * The display size is accessory dependent and can be found using the Registration &amp; Capabilities API.
          * <p>
+         * The Accessory may support several displays.
+         * The displays can be real displays or emulated displays to provide compatibility for
+         * Extensions written for other Accessories.
+         * If several displays are supported the Extension can use {@link #EXTRA_DISPLAY_ID}
+         * to specify the target display.
+         * If {@link #EXTRA_DISPLAY_ID} is absent the Host Application will make a selection
+         * of target display and if necessary scale the image.
+         * </p>
+         * <p>
          * This intent should be sent with enforced security by supplying the host application permission
          * to sendBroadcast(Intent, String). {@link com.sonyericsson.extras.liveware.aef.registration.Registration#HOSTAPP_PERMISSION}
          * </p>
@@ -469,6 +595,7 @@ public class Control {
          * <li>{@link #EXTRA_DATA}</li>
          * <li>{@link #EXTRA_X_OFFSET}</li>
          * <li>{@link #EXTRA_Y_OFFSET}</li>
+         * <li>{@link #EXTRA_DISPLAY_ID} (optional)</li>
          * </ul>
          * </p>
          *
@@ -549,6 +676,328 @@ public class Control {
          * @since 1.0
          */
         static final String CONTROL_SWIPE_EVENT_INTENT = "com.sonyericsson.extras.aef.control.SWIPE_EVENT";
+
+        /**
+         * Intent sent by the Extension whenever it wants to update the Accessory display by sending an XML layout.
+         * Note that the extension must always send a layout covering the full screen according to the display screen size.
+         * This means that even though the extension wants to update a portion of the screen a full screen layout must
+         * be supplied anyway. Objects that should be displayed in the layout are sent separately.
+         * <p>
+         * {@link #EXTRA_LAYOUT_DATA} can be used to update view in the layout with new values.
+         * The content of the view in the layout can also be updated using {@link #CONTROL_SEND_TEXT_INTENT} and {@link #CONTROL_SEND_IMAGE_INTENT}.
+         * </p>
+         * <p>
+         * This intent should be sent with enforced security by supplying the host application permission
+         * to sendBroadcast(Intent, String). {@link com.sonyericsson.extras.liveware.aef.registration.Registration#HOSTAPP_PERMISSION}
+         * </p>
+         * <p>
+         * Intent-extra data:
+         * </p>
+         * <ul>
+         * <li>{@link #EXTRA_AEA_PACKAGE_NAME}</li>
+         * <li>{@link #EXTRA_DATA_XML_LAYOUT}</li>
+         * <li>{@link #EXTRA_LAYOUT_DATA} (optional)</li>
+         * </ul>
+         * </p>
+         *
+         * @since 2.0
+         */
+        static final String CONTROL_PROCESS_LAYOUT_INTENT = "com.sonyericsson.extras.aef.control.PROCESS_LAYOUT";
+
+        /**
+         * Intent sent by the Control extension whenever it wants to update an image in an ImageView on the accessory.
+         * The image can be a URI or an array of a raw image, like JPEG
+         * The image will replace any previous sent image with the same reference.
+         * <p>
+         * This intent should be sent with enforced security by supplying the host application permission
+         * to sendBroadcast(Intent, String). {@link com.sonyericsson.extras.liveware.aef.registration.Registration#HOSTAPP_PERMISSION}
+         * </p>
+         * <p>
+         * Intent-extra data:
+         * </p>
+         * <ul>
+         * <li>{@link #EXTRA_AEA_PACKAGE_NAME}</li>
+         * <li>{@link #EXTRA_LAYOUT_REFERENCE}</li>
+         * <li>{@link #EXTRA_DATA_URI}</li>
+         * <li>{@link #EXTRA_DATA}</li>
+         * </ul>
+         * </p>
+         *
+         * @since 2.0
+         */
+        static final String CONTROL_SEND_IMAGE_INTENT = "com.sonyericsson.extras.aef.control.SEND_IMAGE";
+
+        /**
+         * Intent sent by the Control extension whenever it wants to update a text in a TextView on the accessory.
+         * The text will replace any previous sent text with the same reference.
+         * <p>
+         * This intent should be sent with enforced security by supplying the host application permission
+         * to sendBroadcast(Intent, String). {@link com.sonyericsson.extras.liveware.aef.registration.Registration#HOSTAPP_PERMISSION}
+         * </p>
+         * <p>
+         * Intent-extra data:
+         * </p>
+         * <ul>
+         * <li>{@link #EXTRA_AEA_PACKAGE_NAME}</li>
+         * <li>{@link #EXTRA_LAYOUT_REFERENCE}</li>
+         * <li>{@link #EXTRA_TEXT}</li>
+         * </ul>
+         * </p>
+         *
+         * @since 2.0
+         */
+        static final String CONTROL_SEND_TEXT_INTENT = "com.sonyericsson.extras.aef.control.SEND_TEXT";
+
+        /**
+         * Intent sent by the Host Application to the controlling Extension whenever the active power save mode status changed.
+         * This intent is only sent to control extensions that support active power save mode.
+         * In active power save mode, the control should supply a black and white image.
+         * <p/>
+         * Depending on the mode, a suitable layout should be sent to the accessory.
+         * <p>
+         * Intent-extra data:
+         * </p>
+         * <ul>
+         * <li>{@link #EXTRA_AHA_PACKAGE_NAME}</li>
+         * <li>{@link #EXTRA_ACTIVE_POWER_MODE_STATUS}</li>
+         * <li>{@link #EXTRA_EXTENSION_KEY}</li>
+         * </ul>
+         * </p>
+         *
+         * @since 2.0
+         */
+        static final String CONTROL_ACTIVE_POWER_SAVE_MODE_STATUS_CHANGED_INTENT = "com.sonyericsson.extras.aef.control.ACTIVE_POWER_SAVE_MODE_STATUS_CHANGED";
+
+        /**
+         * Intent sent by the Host Application to the controlling Extension whenever a click
+         * event is detected on a graphical object referenced from a layout.
+         * <p>
+         * Intent-extra data:
+         * </p>
+         * <ul>
+         * <li>{@link #EXTRA_AHA_PACKAGE_NAME}</li>
+         * <li>{@link #EXTRA_CLICK_TYPE}</li>
+         * <li>{@link #EXTRA_LAYOUT_REFERENCE}</li>
+         * <li>{@link #EXTRA_EXTENSION_KEY}</li>
+         * </ul>
+         * </p>
+         *
+         * @since 2.0
+         */
+        static final String CONTROL_OBJECT_CLICK_EVENT_INTENT = "com.sonyericsson.extras.aef.control.OBJECT_CLICK_EVENT";
+
+        /**
+         * Intent sent by the Control extension when it wants to set the number
+         * of items in a ListView. {@link #EXTRA_LAYOUT_REFERENCE} refers to the
+         * ListView to be updated. This intent is used both to specify the
+         * initial size of the list and to update the size of the list.
+         * <p>
+         * {@link #EXTRA_LIST_REFRESH_ALLOWED} specifies if the user is allowed
+         * to manually initiate a refresh of the list content. The default
+         * behavior is that the user is not allowed to initiate a refresh.
+         * The extension is notified about a refresh request through the
+         * {@link #CONTROL_LIST_REFRESH_REQUEST_INTENT} intent.
+         * </p>
+         * <p>
+         * This intent should be sent with enforced security by supplying the
+         * host application permission to sendBroadcast(Intent, String).
+         * {@link com.sonyericsson.extras.liveware.aef.registration.Registration#HOSTAPP_PERMISSION}
+         * </p>
+         * <p>
+         * Intent-extra data:
+         * </p>
+         * <ul>
+         * <li>{@link #EXTRA_AEA_PACKAGE_NAME}</li>
+         * <li>{@link #EXTRA_LAYOUT_REFERENCE}</li>
+         * <li>{@link #EXTRA_LIST_REFRESH_ALLOWED} (optional)</li>
+         * <li>{@link #EXTRA_LIST_COUNT}</li>
+         * <li>{@link #EXTRA_LIST_CONTENT} (optional)</li>
+         * </ul>
+         * </p>
+         *
+         * @since 2.0
+         */
+        static final String CONTROL_LIST_COUNT_INTENT = "com.sonyericsson.extras.aef.control.LIST_COUNT";
+
+
+        /**
+         * Intent sent by the Control extension when it wants to move to a
+         * certain position in a list. The position to move to can either be
+         * specified using {@link #EXTRA_LIST_ITEM_POSITION} or
+         * {@link #EXTRA_LIST_ITEM_ID}.
+         * <p>
+         * This intent should be sent with enforced security by supplying the
+         * host application permission to sendBroadcast(Intent, String).
+         * {@link com.sonyericsson.extras.liveware.aef.registration.Registration#HOSTAPP_PERMISSION}
+         * </p>
+         * <p>
+         * Intent-extra data:
+         * </p>
+         * <ul>
+         * <li>{@link #EXTRA_AEA_PACKAGE_NAME}</li>
+         * <li>{@link #EXTRA_LAYOUT_REFERENCE}</li>
+         * <li>{@link #EXTRA_LIST_ITEM_ID} or {@link #EXTRA_LIST_ITEM_POSITION}</li>
+         * </ul>
+         * </p>
+         *
+         * @since 2.0
+         */
+        static final String CONTROL_LIST_MOVE_INTENT = "com.sonyericsson.extras.aef.control.LIST_MOVE";
+
+        /**
+         * Intent sent the by the Host Application to the Control extension as a
+         * request for a list item.
+         * The extension is expected to respond with a {@link #CONTROL_LIST_ITEM_INTENT}.
+         * <p>
+         * Intent-extra data:
+         * </p>
+         * <ul>
+         * <li>{@link #EXTRA_AHA_PACKAGE_NAME}</li>
+         * <li>{@link #EXTRA_LAYOUT_REFERENCE}</li>
+         * <li>{@link #EXTRA_LIST_ITEM_POSITION}</li>
+         * <li>{@link #EXTRA_EXTENSION_KEY}</li>
+         * </ul>
+         * </p>
+         *
+         * @since 2.0
+         */
+        static final String CONTROL_LIST_REQUEST_ITEM_INTENT = "com.sonyericsson.extras.aef.control.LIST_REQUEST_ITEM";
+
+        /**
+         * Intent sent by the Control extension to update a list item in a
+         * ListView. This can be a response to
+         * {@link #CONTROL_LIST_REQUEST_ITEM_INTENT}, but it can also be sent
+         * unsolicited to refresh an individual list item. To refresh an entire
+         * list a new {@link #CONTROL_LIST_COUNT_INTENT} can be used.
+         * <p>
+         * {@link #EXTRA_LAYOUT_REFERENCE} specifies the ListView and
+         * {@link #EXTRA_LIST_ITEM_POSITION} specifies the position to update.
+         * {@link #EXTRA_DATA_XML_LAYOUT} specifies the layout of the list item.
+         * {@link #EXTRA_LAYOUT_DATA} can be used to update views in the list
+         * item layout with new values.
+         * </p>
+         * <p>
+         * This intent should be sent with enforced security by supplying the
+         * host application permission to sendBroadcast(Intent, String).
+         * {@link com.sonyericsson.extras.liveware.aef.registration.Registration#HOSTAPP_PERMISSION}
+         * </p>
+         * <p>
+         * Intent-extra data:
+         * </p>
+         * <ul>
+         * <li>{@link #EXTRA_AEA_PACKAGE_NAME}</li>
+         * <li>{@link #EXTRA_LAYOUT_REFERENCE}</li>
+         * <li>{@link #EXTRA_DATA_XML_LAYOUT}</li>
+         * <li>{@link #EXTRA_LIST_ITEM_ID}</li>
+         * <li>{@link #EXTRA_LIST_ITEM_POSITION}</li>
+         * <li>{@link #EXTRA_LAYOUT_DATA} (optional)</li>
+         * </ul>
+         * </p>
+         *
+         * @since 2.0
+         */
+        static final String CONTROL_LIST_ITEM_INTENT = "com.sonyericsson.extras.aef.control.LIST_ITEM";
+
+        /**
+         * Intent sent by the Host Application to the Control extension when a
+         * list item has been clicked. If the list item contains any views where
+         * android:clickable is true and one of these views were clicked the
+         * android:id of that view is returned in
+         * {@link #EXTRA_LIST_ITEM_LAYOUT_REFERENCE}.
+         * <p>
+         * Intent-extra data:
+         * </p>
+         * <ul>
+         * <li>{@link #EXTRA_AHA_PACKAGE_NAME}</li>
+         * <li>{@link #EXTRA_LAYOUT_REFERENCE}</li>
+         * <li>{@link #EXTRA_LIST_ITEM_ID}</li>
+         * <li>{@link #EXTRA_LIST_ITEM_POSITION}</li>
+         * <li>{@link #EXTRA_CLICK_TYPE}</li>
+         * <li>{@link #EXTRA_LIST_ITEM_LAYOUT_REFERENCE} (optional)</li>
+         * <li>{@link #EXTRA_EXTENSION_KEY}</li>
+         * </ul>
+         * </p>
+         *
+         * @since 2.0
+         */
+        static final String CONTROL_LIST_ITEM_CLICK_INTENT = "com.sonyericsson.extras.aef.control.LIST_ITEM_CLICK";
+
+        /**
+         * Intent sent by the Host Application to the Control extension when a
+         * list item is selected.
+         * <p>
+         * Intent-extra data:
+         * </p>
+         * <ul>
+         * <li>{@link #EXTRA_AHA_PACKAGE_NAME}</li>
+         * <li>{@link #EXTRA_LAYOUT_REFERENCE}</li>
+         * <li>{@link #EXTRA_LIST_ITEM_ID}</li>
+         * <li>{@link #EXTRA_LIST_ITEM_POSITION}</li>
+         * <li>{@link #EXTRA_EXTENSION_KEY}</li>
+         * </ul>
+         * </p>
+         *
+         * @since 2.0
+         */
+        static final String CONTROL_LIST_ITEM_SELECTED_INTENT = "com.sonyericsson.extras.aef.control.LIST_ITEM_SELECTED";
+
+        /**
+         * Intent sent by the Host Application to the Control extension when a
+         * list refresh request is detected.
+         * <p>
+         * Intent-extra data:
+         * </p>
+         * <ul>
+         * <li>{@link #EXTRA_AHA_PACKAGE_NAME}</li>
+         * <li>{@link #EXTRA_LAYOUT_REFERENCE}</li>
+         * <li>{@link #EXTRA_EXTENSION_KEY}</li>
+         * </ul>
+         * </p>
+         *
+         * @since 2.0
+         */
+        static final String CONTROL_LIST_REFRESH_REQUEST_INTENT = "com.sonyericsson.extras.aef.control.LIST_REFERESH_REQUEST";
+
+        /**
+         * Intent sent by the Control extension when it wants to show a menu.
+         * The {@link #CONTROL_MENU_ITEM_SELECTED} intent is sent to the Control extension when a
+         * menu item has been selected.
+         * <p/>
+         * <p>
+         * This intent should be sent with enforced security by supplying the
+         * host application permission to sendBroadcast(Intent, String).
+         * {@link com.sonyericsson.extras.liveware.aef.registration.Registration#HOSTAPP_PERMISSION}
+         * </p>
+         * <p>
+         * Intent-extra data:
+         * </p>
+         * <ul>
+         * <li>{@link #EXTRA_AEA_PACKAGE_NAME}</li>
+         * <li>{@link #EXTRA_MENU_ITEMS}</li>
+         * </ul>
+         * </p>
+         *
+         * @since 2.0
+         */
+        static final String CONTROL_MENU_SHOW = "com.sonyericsson.extras.aef.control.MENU_SHOW";
+
+        /**
+         * Intent sent by the Host Application to the Control extension when a menu item has been
+         * selected.
+         * {@link #EXTRA_MENU_ITEM_ID} identifies the selected menu item.
+         * <p>
+         * Intent-extra data:
+         * </p>
+         * <ul>
+         * <li>{@link #EXTRA_AHA_PACKAGE_NAME}</li>
+         * <li>{@link #EXTRA_EXTENSION_KEY}</li>
+         * <li>{@link #EXTRA_MENU_ITEM_ID}</li>
+         * </ul>
+         * </p>
+         *
+         * @since 2.0
+         */
+        static final String CONTROL_MENU_ITEM_SELECTED = "com.sonyericsson.extras.aef.control.MENU_ITEM_SELECTED";
 
         /**
          * The name of the Intent-extra used to identify the Host Application.
@@ -818,9 +1267,312 @@ public class Control {
          */
         static final String EXTRA_EXTENSION_KEY = "extension_key";
 
+        /**
+         * The name of the Intent-extra used to identify the data XML layout to be processed by the host application
+         * and displayed by the accessory.
+         * The layout resource id is used to identify the layout.
+         * <P>
+         * This is a standard Android layout, where a subset of the Android views are supported.
+         * </P>
+         * <h3>Dimensions</h3>
+         * <P>
+         * The px dimensions is the only dimension supported.
+         * The only exception is text sizes which can be specified using sp to indicate that the text
+         * shall be scaled to the user preference setting on the accessory.
+         * </P>
+         * <h3>ViewGroups</h3>
+         * <P>
+         * The following ViewGroups are supported:
+         * <ul>
+         * <li>AbsoluteLayout</li>
+         * <li>FrameLayout</li>
+         * <li>LinearLayout</li>
+         * <li>RelativeLayout</li>
+         * </ul>
+         * All XML attributes are supported for the supported ViewGroups.
+         * </P>
+         * <h3>Views</h3>
+         * <P>
+         * The following Views are supported:
+         * <ul>
+         * <li>View</li>
+         * <li>ImageView</li>
+         * <li>TextView</li>
+         * <li>ListView</li>
+         * <li>Gallery</li>
+         * </ul>
+         * An accessory may support only a subset of these layouts.
+         * {@link DeviceColumns#LAYOUT_SUPPORT} specifies which Views that are
+         * supported for a certain accessory.
+         * </p>
+         * <p>
+         * The following View XML attributes are supported
+         * <ul>
+         * <li>android:background - restricted to a solid color such as "#ff000000" (black)</li>
+         * <li>android:clickable - {@link #CONTROL_OBJECT_CLICK_EVENT_INTENT} are sent for views that are clickable</li>
+         * <li>android:id</li>
+         * <li>android:layout_height</li>
+         * <li>android:layout_width</li>
+         * <li>android:padding</li>
+         * <li>android:paddingBottom</li>
+         * <li>android:paddingLeft</li>
+         * <li>android:paddingRight</li>
+         * <li>android:paddingTop</li>
+         * </ul>
+         * </P>
+         * <h3>ImageView</h3>
+         * <P>
+         * For an ImageView the following XML attributes are supported
+         * <ul>
+         * <li>android:src - can be a BitmapDrawable or a NinePatchDrawable</li>
+         * <li>android:scaleType</li>
+         * </ul>
+         * </P>
+         * <h3>TextView</h3>
+         * <P>
+         * For a TextView the following XML attributes are supported
+         * <ul>
+         * <li>android:ellipsize - can be none, start, middle or end</li>
+         * <li>android:gravity</li>
+         * <li>android:lines</li>
+         * <li>android:maxLines</li>
+         * <li>android:singleLine</li>
+         * <li>android:text</li>
+         * <li>android:textColor</li>
+         * <li>android:textSize - Not all text sizes are supported by all accessories.
+         * If a not supported text size is used the accessory will select the closest available text size.
+         * See the accessory white paper for a list of supported text sizes.
+         * </br>
+         * If the sp unit is used the text is scaled according to settings on the accessories (if supported by the accessory).
+         * If the px unit is used the text is not affected by any settings on the accessory.
+         * </li>
+         * <li>android:textStyle</li>
+         * </ul>
+         * </P>
+         * <h3>ListView and Gallery</h3>
+         * <p>
+         * For a ListView and a Gallery there are some additional limitations.
+         * These views always have to fill the entire display width.
+         * The items in these views also have to fill the entire display width.
+         * The height of an item may not be larger than the height of the parent view.
+         * </p>
+         * <p/>
+         * TYPE: INTEGER
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTRA_DATA_XML_LAYOUT = "data_xml_layout";
 
         /**
-         * The touch action is a press event
+         * The name of the Intent-extra used to identify a reference within a layout.
+         * Corresponds to the android:id XML attribute in the layout.
+         * <p/>
+         * TYPE: INTEGER
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTRA_LAYOUT_REFERENCE = "layout_reference";
+
+        /**
+         * The name of the Intent-extra used when sending a text (String)
+         * from the extension to the accessory. The accessory will map the text
+         * to a layout reference.
+         * <p/>
+         * TYPE: STRING
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTRA_TEXT = "text_from extension";
+
+        /**
+         * The name of the Intent-extra used for indicating the status of the Active Power State Mode.
+         * <p/>
+         * TYPE: INTEGER (int)
+         * </P>
+         * <p/>
+         * ALLOWED VALUES:
+         * <ul>
+         * <li> ACTIVE_POWER_SAVE_MODE_OFF</li>
+         * <li> ACTIVE_POWER_SAVE_MODE_ON</li>
+         * </ul>
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTRA_ACTIVE_POWER_MODE_STATUS = "active_power_mode_status";
+
+        /**
+         * Data used to populate the views in a XML layout with dynamic info.
+         * For example updating a TextView with a new text or setting a new
+         * image in an ImageView. {@link #EXTRA_LAYOUT_REFERENCE} specifies the
+         * view to be updated and one of {@link #EXTRA_TEXT},
+         * {@link #EXTRA_DATA_URI} and {@link #EXTRA_DATA} specifies the new
+         * information in the view.
+         * <p/>
+         * TYPE: Array of BUNDLEs with following information in each BUNDLE.
+         * <ul>
+         * <li>{@link #EXTRA_LAYOUT_REFERENCE}</li>
+         * <li>{@link #EXTRA_TEXT} or {@link #EXTRA_DATA_URI} or {@link #EXTRA_DATA}</li>
+         * </ul>
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTRA_LAYOUT_DATA = "layout_data";
+
+        /**
+         * Data to populate a ListView with initial content.
+         * <p/>
+         * <p/>
+         * TYPE: Array of BUNDLEs with following information in each BUNDLE.
+         * <ul>
+         * <li>{@link #EXTRA_DATA_XML_LAYOUT}</li>
+         * <li>{@link #EXTRA_LIST_ITEM_ID}</li>
+         * <li>{@link #EXTRA_LIST_ITEM_POSITION}</li>
+         * <li>{@link #EXTRA_LAYOUT_DATA} (optional)</li>
+         * </ul>
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTRA_LIST_CONTENT = "list_content";
+
+        /**
+         * The type of a click.
+         * <p/>
+         * TYPE: INTEGER (int)
+         * </P>
+         * <p/>
+         * ALLOWED VALUES:
+         * <ul>
+         * <li>{@link #CLICK_TYPE_SHORT}</li>
+         * <li>{@link #CLICK_TYPE_LONG}</li>
+         * </ul>
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTRA_CLICK_TYPE = "click_type";
+
+        /**
+         * A unique identity of a list item assigned by the extension.
+         * This can for example be the row id from a database.
+         * <p/>
+         * TYPE: INTEGER
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTRA_LIST_ITEM_ID = "list_item_id";
+
+        /**
+         * The position in a list. The position is in the range from 0 to the
+         * {@link #EXTRA_LIST_COUNT}-1.
+         * <p/>
+         * TYPE: INTEGER
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTRA_LIST_ITEM_POSITION = "list_item_position";
+
+        /**
+         * The number of items in a list.
+         * <p/>
+         * TYPE: INTEGER
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTRA_LIST_COUNT = "list_count";
+
+        /**
+         * Reference to a view in a list item layout.
+         * Corresponds to the android:id XML attribute in the layout.
+         * <p/>
+         * TYPE: INTEGER
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTRA_LIST_ITEM_LAYOUT_REFERENCE = "list_item_layout_reference";
+
+        /**
+         * If true then the user is allowed to initiate a refresh of the list
+         * content. (For example by a pull to refresh gesture.)
+         * <p/>
+         * TYPE: BOOLEAN
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTRA_LIST_REFRESH_ALLOWED = "list_referesh_allowed";
+
+        /**
+         * The id of the display.
+         * Refers to {@link Registration.DisplayColumns#_ID}.
+         * <p/>
+         * TYPE: INTEGER (int)
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTRA_DISPLAY_ID = "displayId";
+
+        /**
+         * The URI of an icon (40x40 pixels) for a menu item.
+         * <p/>
+         * <p/>
+         * TYPE: TEXT
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTRA_MENU_ITEM_ICON = "menuItemIcon";
+
+        /**
+         * The text for a menu item.
+         * <p/>
+         * <p/>
+         * TYPE: TEXT
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTRA_MENU_ITEM_TEXT = "menuItemText";
+
+        /**
+         * A unique identity of a menu item assigned by the extension.
+         * <p/>
+         * TYPE: INTEGER
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTRA_MENU_ITEM_ID = "menuItemId";
+
+        /**
+         * Items for a menu. Each menu item can either be an icon or a text
+         * string. The {@link #EXTRA_MENU_ITEM_ID} is used to identify the
+         * selected menu item. {@link Registration.DisplayColumns#MENU_ITEMS}
+         * specifies the number of menu items supported by the display.
+         * <p/>
+         * TYPE: Array of BUNDLEs with following information in each BUNDLE.
+         * <ul>
+         * <li>{@link #EXTRA_MENU_ITEM_ID}</li>
+         * <li>{@link #EXTRA_MENU_ITEM_ICON} or {@link #EXTRA_MENU_ITEM_TEXT}</li>
+         * </ul>
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTRA_MENU_ITEMS = "menuItems";
+
+        /**
+         * The touch action is a press event.
          *
          * @since 1.0
          */
@@ -937,6 +1689,34 @@ public class Control {
          * @since 1.0
          */
         static final int REPEAT_UNTIL_STOP_INTENT = -1;
+
+        /**
+         * Constant defining active power safe mode OFF.
+         *
+         * @since 2.0
+         */
+        static final int ACTIVE_POWER_SAVE_MODE_OFF = 0;
+
+        /**
+         * Constant defining active power safe mode ON.
+         *
+         * @since 2.0
+         */
+        static final int ACTIVE_POWER_SAVE_MODE_ON = 1;
+
+        /**
+         * A click is a short click.
+         *
+         * @since 2.0
+         */
+        static final int CLICK_TYPE_SHORT = 0;
+
+        /**
+         * The click is a long click.
+         *
+         * @since 2.0
+         */
+        static final int CLICK_TYPE_LONG = 1;
     }
 
     /**
@@ -979,5 +1759,10 @@ public class Control {
          * Keycode representing a back button
          */
         static final int KEYCODE_BACK = 7;
+
+        /**
+         * Keycode representing an options button
+         */
+        static final int KEYCODE_OPTIONS = 8;
     }
 }

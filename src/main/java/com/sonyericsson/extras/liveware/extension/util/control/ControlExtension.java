@@ -40,6 +40,8 @@ import android.graphics.Bitmap.CompressFormat;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
+import android.view.View;
+import android.view.ViewGroup;
 
 import com.sonyericsson.extras.liveware.aef.control.Control;
 import com.sonyericsson.extras.liveware.aef.registration.Registration;
@@ -48,6 +50,7 @@ import com.sonyericsson.extras.liveware.aef.registration.Registration.DeviceColu
 import com.sonyericsson.extras.liveware.aef.registration.Registration.HostApp;
 import com.sonyericsson.extras.liveware.aef.registration.Registration.HostAppColumns;
 import com.sonyericsson.extras.liveware.extension.util.Dbg;
+import com.sonyericsson.extras.liveware.extension.util.ExtensionUtils;
 
 import java.io.ByteArrayOutputStream;
 
@@ -57,19 +60,14 @@ import java.io.ByteArrayOutputStream;
 public abstract class ControlExtension {
 
     private static final int STATE_CREATED = 0;
-
-    private static final int STATE_STARTED = 1;
-
-    private static final int STATE_FOREGROUND = 2;
-
     private int mState = STATE_CREATED;
-
+    private static final int STATE_STARTED = 1;
+    private static final int STATE_FOREGROUND = 2;
     protected final Context mContext;
 
     protected final String mHostAppPackageName;
 
     protected final BitmapFactory.Options mBitmapOptions;
-
 
     /**
      * Create control extension.
@@ -159,7 +157,6 @@ public abstract class ControlExtension {
 
     }
 
-
     /**
      * Called to notify a control extension that it is no longer used and is
      * being removed. The control extension should clean up any resources it
@@ -190,8 +187,8 @@ public abstract class ControlExtension {
     }
 
     /**
-     * Called when the control extension is resumed by the host application.
-     * The extension is expected to send a new image each time it is resumed.
+     * Called when the control extension is resumed by the host application. The
+     * extension is expected to send a new image each time it is resumed.
      */
     public void onResume() {
     }
@@ -199,7 +196,8 @@ public abstract class ControlExtension {
     /**
      * Called when host application reports an error.
      *
-     * @param code The reported error code. {@link Control.Intents#EXTRA_ERROR_CODE}
+     * @param code The reported error code.
+     *             {@link Control.Intents#EXTRA_ERROR_CODE}
      */
     public void onError(final int code) {
 
@@ -231,6 +229,15 @@ public abstract class ControlExtension {
     }
 
     /**
+     * Called when an object click event has occurred.
+     *
+     * @param event The object click event.
+     */
+    public void onObjectClick(final ControlObjectClickEvent event) {
+
+    }
+
+    /**
      * Called when a swipe event has occurred
      *
      * @param direction The swipe direction, one of
@@ -242,6 +249,57 @@ public abstract class ControlExtension {
      *                  </ul>
      */
     public void onSwipe(int direction) {
+
+    }
+
+    /**
+     * Called when the host application requests content for a specific list
+     * item.
+     *
+     * @param layoutReference  The referenced list view
+     * @param listItemPosition The referenced list item position
+     */
+    public void onRequestListItem(final int layoutReference, final int listItemPosition) {
+
+    }
+
+    /**
+     * Called when an item in a list has been clicked.
+     *
+     * @param listItem            The list item that was clicked
+     * @param clickType           The type of click (long, short)
+     * @param itemLayoutReference The object within the list item that was
+     *                            clicked
+     */
+    public void onListItemClick(final ControlListItem listItem, final int clickType,
+                                final int itemLayoutReference) {
+
+    }
+
+    /**
+     * Called when an item in a list has been clicked.
+     *
+     * @param layoutReference The referenced list view
+     */
+    public void onListRefreshRequest(final int layoutReference) {
+
+    }
+
+    /**
+     * Called when an item in a list has been selected.
+     *
+     * @param listItem The list item that was selected
+     */
+    public void onListItemSelected(final ControlListItem listItem) {
+
+    }
+
+    /**
+     * Called when a menu item has been selected.
+     *
+     * @param menuItem The menu item that was selected
+     */
+    public void onMenuItemSelected(final int menuItem) {
 
     }
 
@@ -286,6 +344,81 @@ public abstract class ControlExtension {
         bitmap.compress(CompressFormat.PNG, 100, os);
         byte[] buffer = os.toByteArray();
         intent.putExtra(Control.Intents.EXTRA_DATA, buffer);
+        sendToHostApp(intent);
+    }
+
+    /**
+     * Show a layout on the accessory.
+     *
+     * @param layoutId   The layout resource id.
+     * @param layoutData The layout data.
+     */
+    protected void showLayout(final int layoutId, final Bundle[] layoutData) {
+        if (Dbg.DEBUG) {
+            Dbg.d("showLayout");
+        }
+
+        Intent intent = new Intent(Control.Intents.CONTROL_PROCESS_LAYOUT_INTENT);
+        intent.putExtra(Control.Intents.EXTRA_DATA_XML_LAYOUT, layoutId);
+        if (layoutData != null && layoutData.length > 0) {
+            intent.putExtra(Control.Intents.EXTRA_LAYOUT_DATA, layoutData);
+        }
+
+        sendToHostApp(intent);
+    }
+
+    /**
+     * Update an image in a specific layout, on the accessory.
+     *
+     * @param layoutReference The referenced resource within the current layout.
+     * @param resourceId      The image resource id.
+     */
+    protected void sendImage(final int layoutReference, final int resourceId) {
+        if (Dbg.DEBUG) {
+            Dbg.d("sendImage");
+        }
+
+        Intent intent = new Intent(Control.Intents.CONTROL_SEND_IMAGE_INTENT);
+        intent.putExtra(Control.Intents.EXTRA_LAYOUT_REFERENCE, layoutReference);
+        intent.putExtra(Control.Intents.EXTRA_DATA_URI,
+                ExtensionUtils.getUriString(mContext, resourceId));
+        sendToHostApp(intent);
+    }
+
+    /**
+     * Update an image in a specific layout, on the accessory.
+     *
+     * @param layoutReference The referenced resource within the current layout.
+     * @param bitmap          The bitmap to show.
+     */
+    protected void sendImage(final int layoutReference, final Bitmap bitmap) {
+        if (Dbg.DEBUG) {
+            Dbg.d("sendImage");
+        }
+
+        Intent intent = new Intent(Control.Intents.CONTROL_SEND_IMAGE_INTENT);
+        intent.putExtra(Control.Intents.EXTRA_LAYOUT_REFERENCE, layoutReference);
+        ByteArrayOutputStream os = new ByteArrayOutputStream(256);
+        bitmap.compress(CompressFormat.PNG, 100, os);
+        byte[] buffer = os.toByteArray();
+        intent.putExtra(Control.Intents.EXTRA_DATA, buffer);
+        sendToHostApp(intent);
+    }
+
+    /**
+     * Update text in a specific layout, on the accessory. TODO: This should be
+     * moved to ControlExtension
+     *
+     * @param layoutReference The referenced resource within the current layout.
+     * @param resourceId      The image resource id.
+     */
+    protected void sendText(final int layoutReference, final String text) {
+        if (Dbg.DEBUG) {
+            Dbg.d("sendText: " + text);
+        }
+        Intent intent = new Intent(Control.Intents.CONTROL_SEND_TEXT_INTENT);
+        intent.putExtra(Control.Intents.EXTRA_LAYOUT_REFERENCE, layoutReference);
+        intent.putExtra(Control.Intents.EXTRA_TEXT, text);
         sendToHostApp(intent);
     }
 
@@ -429,6 +562,56 @@ public abstract class ControlExtension {
         sendToHostApp(intent);
     }
 
+    protected void sendListCount(int layoutReference, int listCount) {
+        Intent intent = new Intent(Control.Intents.CONTROL_LIST_COUNT_INTENT);
+        intent.putExtra(Control.Intents.EXTRA_LAYOUT_REFERENCE, layoutReference);
+        intent.putExtra(Control.Intents.EXTRA_LIST_COUNT, listCount);
+        sendToHostApp(intent);
+    }
+
+    protected void sendListCountWithContent(int layoutReference, int listCount, Bundle[] bundles) {
+        Intent intent = new Intent(Control.Intents.CONTROL_LIST_COUNT_INTENT);
+        intent.putExtra(Control.Intents.EXTRA_LAYOUT_REFERENCE, layoutReference);
+        intent.putExtra(Control.Intents.EXTRA_LIST_COUNT, listCount);
+        intent.putExtra(Control.Intents.EXTRA_LIST_CONTENT, bundles);
+        sendToHostApp(intent);
+    }
+
+    protected void sendListItem(ControlListItem item) {
+        Intent intent = new Intent(Control.Intents.CONTROL_LIST_ITEM_INTENT);
+        intent.putExtra(Control.Intents.EXTRA_LAYOUT_REFERENCE, item.layoutReference);
+        intent.putExtra(Control.Intents.EXTRA_DATA_XML_LAYOUT, item.dataXmlLayout);
+        if (item.listItemId != -1) {
+            intent.putExtra(Control.Intents.EXTRA_LIST_ITEM_ID, item.listItemId);
+        }
+        if (item.listItemPosition != -1) {
+            intent.putExtra(Control.Intents.EXTRA_LIST_ITEM_POSITION, item.listItemPosition);
+        }
+        if (item.layoutData != null && item.layoutData.length > 0) {
+            intent.putExtra(Control.Intents.EXTRA_LAYOUT_DATA, item.layoutData);
+        }
+        sendToHostApp(intent);
+    }
+
+    /**
+     * Sends a request to host app to move a list to a specified position
+     *
+     * @param layoutReference  The referenced list view
+     * @param listItemPosition The referenced list item position
+     */
+    protected void sendListPosition(int layoutReference, int position) {
+        Intent intent = new Intent(Control.Intents.CONTROL_LIST_MOVE_INTENT);
+        intent.putExtra(Control.Intents.EXTRA_LAYOUT_REFERENCE, layoutReference);
+        intent.putExtra(Control.Intents.EXTRA_LIST_ITEM_POSITION, position);
+        sendToHostApp(intent);
+    }
+
+    protected void showMenu(Bundle[] menuItems) {
+        Intent intent = new Intent(Control.Intents.CONTROL_MENU_SHOW);
+        intent.putExtra(Control.Intents.EXTRA_MENU_ITEMS, menuItems);
+        sendToHostApp(intent);
+    }
+
     /**
      * Send intent to host application. Adds host application package name and
      * our package name.
@@ -449,11 +632,14 @@ public abstract class ControlExtension {
     protected long getHostAppId() {
         Cursor cursor = null;
         try {
-            cursor = mContext.getContentResolver().query(HostApp.URI, new String[]{
-                    HostAppColumns._ID
-            }, HostAppColumns.PACKAGE_NAME + " = ?", new String[]{
-                    mHostAppPackageName
-            }, null);
+            cursor = mContext.getContentResolver().query(HostApp.URI,
+                    new String[]{
+                            HostAppColumns._ID
+                    }, HostAppColumns.PACKAGE_NAME + " = ?",
+                    new String[]{
+                            mHostAppPackageName
+                    }, null
+            );
             if (cursor != null && cursor.moveToFirst()) {
                 return cursor.getLong(cursor.getColumnIndexOrThrow(HostAppColumns._ID));
             }
@@ -493,7 +679,8 @@ public abstract class ControlExtension {
                             DeviceColumns.VIBRATOR
                     },
                     DeviceColumns.HOST_APPLICATION_ID + " = " + hostAppId + " AND "
-                            + DeviceColumns.VIBRATOR + " = 1", null, null);
+                            + DeviceColumns.VIBRATOR + " = 1", null, null
+            );
             if (cursor != null) {
                 return (cursor.getCount() > 0);
             }
@@ -517,4 +704,27 @@ public abstract class ControlExtension {
 
         return false;
     }
+
+    protected ControlViewGroup parseLayout(View v) {
+        ControlViewGroup controlViewGroup = new ControlViewGroup();
+        controlViewGroup.addView(new ControlView(v.getId(), v.isClickable(), v.isLongClickable()));
+        if (v instanceof ViewGroup) {
+            parseLayoutTraverse((ViewGroup) v, controlViewGroup);
+        }
+        return controlViewGroup;
+    }
+
+    private void parseLayoutTraverse(ViewGroup v, ControlViewGroup controlViewGroup) {
+        for (int i = 0; i < v.getChildCount(); i++) {
+            View current = v.getChildAt(i);
+            controlViewGroup.addView(new ControlView(current.getId(), current.isClickable(),
+                    current
+                            .isLongClickable()
+            ));
+            if (current instanceof ViewGroup) {
+                parseLayoutTraverse((ViewGroup) current, (ControlViewGroup) controlViewGroup);
+            }
+        }
+    }
+
 }

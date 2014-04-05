@@ -18,6 +18,10 @@ modification, are permitted provided that the following conditions are met:
   of its contributors may be used to endorse or promote products derived from
   this software without specific prior written permission.
 
+* Neither the name of the Sony Mobile Communications AB nor the names
+  of its contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -39,12 +43,12 @@ import com.sonyericsson.extras.liveware.aef.registration.Registration.ExtensionC
 
 /**
  * <h1>Overview</h1>
- * <p>Notification is a part of the Smart Extension API's
+ * <p>Notification is a part of the Smart Extension APIs.
  * The Notification engine enables the gathering of event-type data from different
  * sources to one place so that accessory host applications will be able to
  * access this data, instead of getting the data from each individual source.
  * Examples of event-data are activity streams on a social network, new incoming
- * SMS and MMS message notifications, a missed call notification etc.
+ * SMS and MMS message notifications, a missed call notification, etc.
  * </p>
  * <p>
  * Application developers who wish to have their event-data presented by
@@ -107,7 +111,6 @@ import com.sonyericsson.extras.liveware.aef.registration.Registration.ExtensionC
  * <li><a href="#Security">Security</a>
  * <li><a href="#ExtensionLifecycle">Extension Lifecycle</a>
  * <li><a href="#addSource">Adding a Source</a>
- * <li><a href="#configActivity">For the End User to Configure the Extension</a>
  * <li><a href="#getevents">Getting event-data</a>
  * <li><a href="#viewEvent">Showing the Detail View of an Event</a>
  * <li><a href="#ContactLinking">Contact Linking</a>
@@ -148,8 +151,9 @@ import com.sonyericsson.extras.liveware.aef.registration.Registration.ExtensionC
  * configuration options on the user interface to filter event-data by
  * <i>Source</i>.Extension developers who wish to have the accessory host
  * application display events from different <i>Sources</i>
- * clearly should add {@link Source} information. There is a limit set on
- * the number of <i>Sources</i> that is linked to a <i>Extension</i>. If the limit
+ * clearly should add {@link Source} information.
+ * Up to 8 sources can be linked to a <i>Extension</i>.
+ * If the limit
  * is reached, an exception will be thrown. A <i>Source</i> always has to be
  * linked to an <i>Extension</i> .
  * </p>
@@ -161,10 +165,13 @@ import com.sonyericsson.extras.liveware.aef.registration.Registration.ExtensionC
  * by the extensions. The accessory host application typically uses the information
  * in this table to present the data. An <i>Event</i> is always connected
  * to a <i>Source</i> but a </i>Source</i> may not always have to have an
- * <i>Event</i>. There is a limitation on the number of events from a <i>Source</i>
+ * <i>Event</i>.
+ * Maximum 100 events from a <i>Source</i>
  * stored in {@link Event}; when the limit is reached, events will be automatically
  * removed.
  * </p>
+ * <img src="../../../../../../../images/notification_database.png"
+ * alt="Notification database" border="1" />
  * <a name="InterAppCommunication"></a>
  * <h3>Inter-application communication</h3>
  * <p>
@@ -242,12 +249,13 @@ import com.sonyericsson.extras.liveware.aef.registration.Registration.ExtensionC
  * .authority(getPackageName())
  * .appendPath(Integer.toString(R.drawable.icon));
  * <p/>
- * values.put("name", "RSS news feed");
- * values.put("enabled", "1");
- * values.put("icon_uri", iconUriBuilder.toString());
+ * values.put(SourceColumns.NAME, "RSS news feed");
+ * values.put(SourceColumns.ENABLED, "1");
+ * values.put(SourceColumns.ICON_URI_1, iconUriBuilder.toString());
  * <p/>
- * uri = cr.insert(Uri.parse("content://com.sonyericsson.extras.liveware.aef.notification/source"),
- * values);
+ * ...
+ * <p/>
+ * uri = cr.insert(Source.URI, values);
  * </pre>
  * </p>
  * <a name="getevents"></a>
@@ -275,8 +283,7 @@ import com.sonyericsson.extras.liveware.aef.registration.Registration.ExtensionC
  * ContentResolver cr = getContentResolver();
  * ContentValues[] valueArray = new ContentValues[count];
  * &lt fill valueArray with data &gt
- * cr.bulkInsert(Uri.parse("content://com.sonyericsson.extras.liveware.aef.notification.event,
- * valueArray);
+ * cr.bulkInsert(Event.URI, valueArray);
  * </pre>
  * </p>
  * <p>
@@ -326,7 +333,7 @@ import com.sonyericsson.extras.liveware.aef.registration.Registration.ExtensionC
  * </li>
  * </ul>
  * <p>
- * * <a name="DataIntegrity"></a>
+ * <a name="DataIntegrity"></a>
  * <h3>Data Integrity</h3>
  * <p>
  * In order to have a consistent database, the Notification Engine will enforce
@@ -350,25 +357,24 @@ import com.sonyericsson.extras.liveware.aef.registration.Registration.ExtensionC
 public class Notification {
 
     /**
-     * @hide This class is only intended as a utility class containing declared constants
-     * that will be used by notification extension developers.
-     */
-    protected Notification() {
-    }
-
-    /**
      * Authority for the Notification provider.
      *
      * @since 1.0
      */
     public static final String AUTHORITY = "com.sonyericsson.extras.liveware.aef.notification";
-
     /**
      * Base URI for the Notification provider.
      *
      * @since 1.0
      */
     protected static final Uri BASE_URI = Uri.parse("content://" + AUTHORITY);
+
+    /**
+     * @hide This class is only intended as a utility class containing declared constants
+     * that will be used by notification extension developers.
+     */
+    protected Notification() {
+    }
 
     /**
      * Broadcast Intents sent to extensions by the host application.
@@ -435,6 +441,9 @@ public class Notification {
          * action_1 {@link SourceColumns#ACTION_1}
          * action_2 {@link SourceColumns#ACTION_2}
          * action_3 {@link SourceColumns#ACTION_3}
+         * action_icon_1 {@link SourceColumns#ACTION_ICON_1}
+         * action_icon_2 {@link SourceColumns#ACTION_ICON_2}
+         * action_icon_3 {@link SourceColumns#ACTION_ICON_3}
          * <p/>
          * ALLOWED VALUES:
          * <ul>
@@ -478,6 +487,7 @@ public class Notification {
          * using the {@link Intents#VIEW_EVENT_INTENT} intent.
          * The action corresponds the action that is
          * defined in the source table action_1 {@link SourceColumns#ACTION_1}
+         * or action_icon_1 {@link SourceColumns#ACTION_ICON_1}
          * <p/>
          * TYPE: TEXT
          * </P>
@@ -491,6 +501,7 @@ public class Notification {
          * using the {@link Intents#VIEW_EVENT_INTENT} intent.
          * The action corresponds the action that is
          * defined in the source table action_2 {@link SourceColumns#ACTION_2}
+         * or action_icon_2 {@link SourceColumns#ACTION_ICON_2}
          * <p/>
          * TYPE: TEXT
          * </P>
@@ -504,6 +515,7 @@ public class Notification {
          * using the {@link Intents#VIEW_EVENT_INTENT} intent.
          * The action corresponds the action that is
          * defined in the source table action_3 {@link SourceColumns#ACTION_3}
+         * or action_icon_3 {@link SourceColumns#ACTION_ICON_3}
          * <p/>
          * TYPE: TEXT
          * </P>
@@ -625,7 +637,8 @@ public class Notification {
          * The action is defined by the extension and supported
          * for this source.
          * Actions are sent to the extension from host applications
-         * using the {@link Intents#VIEW_EVENT_INTENT} intent
+         * using the {@link Intents#VIEW_EVENT_INTENT} intent.
+         * This is the text for the action.
          * <p/>
          * <p/>
          * TYPE: TEXT
@@ -643,7 +656,8 @@ public class Notification {
          * The action is defined by the extension and supported
          * for this source.
          * Actions are sent to the extension from host applications
-         * using the {@link Intents#VIEW_EVENT_INTENT} intent
+         * using the {@link Intents#VIEW_EVENT_INTENT} intent.
+         * This is the text for the action.
          * <p/>
          * <p/>
          * TYPE: TEXT
@@ -659,9 +673,10 @@ public class Notification {
         /**
          * Action supported by the extension.
          * The action is defined by the extension and supported
-         * for this source..
+         * for this source.
          * Actions are sent to the extension from host applications
-         * using the {@link Intents#VIEW_EVENT_INTENT} intent
+         * using the {@link Intents#VIEW_EVENT_INTENT} intent.
+         * This is the text for the action.
          * <p/>
          * <p/>
          * TYPE: TEXT
@@ -673,6 +688,63 @@ public class Notification {
          * @since 1.0
          */
         static final String ACTION_3 = "action_3";
+
+        /**
+         * Action supported by the extension.
+         * The action is defined by the extension and supported
+         * for this source.
+         * Actions are sent to the extension from host applications
+         * using the {@link Intents#VIEW_EVENT_INTENT} intent.
+         * This is the URI for the action icon (40x40 pixels).
+         * <p/>
+         * <p/>
+         * TYPE: TEXT
+         * </P>
+         * <p/>
+         * PRESENCE: OPTIONAL
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String ACTION_ICON_1 = "action_icon_1";
+
+        /**
+         * Action supported by the extension.
+         * The action is defined by the extension and supported
+         * for this source.
+         * Actions are sent to the extension from host applications
+         * using the {@link Intents#VIEW_EVENT_INTENT} intent.
+         * This is the URI for the action icon (40x40 pixels).
+         * <p/>
+         * <p/>
+         * TYPE: TEXT
+         * </P>
+         * <p/>
+         * PRESENCE: OPTIONAL
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String ACTION_ICON_2 = "action_icon_2";
+
+        /**
+         * Action supported by the extension.
+         * The action is defined by the extension and supported
+         * for this source.
+         * Actions are sent to the extension from host applications
+         * using the {@link Intents#VIEW_EVENT_INTENT} intent.
+         * This is the URI for the action icon (40x40 pixels).
+         * <p/>
+         * <p/>
+         * TYPE: TEXT
+         * </P>
+         * <p/>
+         * PRESENCE: OPTIONAL
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String ACTION_ICON_3 = "action_icon_3";
 
         /**
          * The time (in milliseconds since January 1, 1970 00:00:00 UTC UNIX
@@ -723,19 +795,53 @@ public class Notification {
         static final String EXTENSION_SPECIFIC_ID = "extension_specific_id";
 
         /**
+         * The color associated with this source.
+         * This color will be used when visualizing the source and the events associated with it.
+         * The color shall be sent in the format specified in {@link android.graphics.Color}.
+         * There is no support for transparency (alpha is ignored). If not set the color is
+         * determined by the host application.
+         * <p/>
+         * TYPE: INTEGER (int)
+         * </P>
+         * <p/>
+         * PRESENCE: OPTIONAL
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String COLOR = "color";
+
+        /**
          * The package name of a plug-in.
          * If an extension supports shared user id, the package name
          * must be specified
          * <p/>
          * TYPE: TEXT
          * </P>
-         * * <P>
+         * <p/>
          * PRESENCE: OPTIONAL (REQUIRED if shared user id is used by extension)
          * </P>
          *
          * @since 1.0
          */
         static final String PACKAGE_NAME = "packageName";
+
+        /**
+         * If true it is possible for the user to trigger a manual refresh of events from this
+         * source.
+         * The manual refresh can for example be used to trigger a new poll to a server.
+         * The {@link Intents#REFRESH_REQUEST_INTENT} is sent to the extension when the user has
+         * initiated a refresh.
+         * <p/>
+         * TYPE: BOOLEAN
+         * </P>
+         * <p/>
+         * PRESENCE: OPTIONAL (Default behavior is FALSE)
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String SUPPORTS_REFRESH = "supportsRefresh";
     }
 
     /**

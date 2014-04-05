@@ -18,6 +18,10 @@ modification, are permitted provided that the following conditions are met:
   of its contributors may be used to endorse or promote products derived from
   this software without specific prior written permission.
 
+* Neither the name of the Sony Mobile Communications AB nor the names
+  of its contributors may be used to endorse or promote products derived from
+  this software without specific prior written permission.
+
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -35,8 +39,11 @@ package com.sonyericsson.extras.liveware.aef.registration;
 import android.net.Uri;
 import android.provider.BaseColumns;
 
+import com.sonyericsson.extras.liveware.aef.control.Control;
+import com.sonyericsson.extras.liveware.aef.widget.Widget;
+
 /**
- * <h1>The Registration and Capability API is a part of the Smart Extension API's</h1>
+ * <h1>The Registration and Capability API is a part of the Smart Extension APIs</h1>
  * <p>
  * This API is used by accessory extensions and accessory host applications. Typically host applications insert
  * and maintain information about the accessories capabilities. Extensions use the capability information
@@ -47,38 +54,24 @@ import android.provider.BaseColumns;
  * </p>
  * <p>Topics covered here:
  * <ol>
- * <li><a href="#Registration">Extension registration</a>
  * <li><a href="#Capabilities">Using the capabilities API</a>
+ * <li><a href="#Registration">Extension registration</a>
+ * <li><a href="#configActivity">User extension configuration</a>
  * <li><a href="#Security">Security.</a>
  * </ol>
- * </p>
- * <a name="Registration"></a>
- * <h3>Extension registration</h3>
- * <p>
- * Before an extension can use an accessory, the extension must use the registration API content provider
- * to insert a record in the extension table. The URI is defined in the Extension interface {@link Extension#URI} and
- * the table scheme is defined in the ExtensionColumns interface {@link ExtensionColumns}.
- * After inserting a record in the extensions table, the extension is ready to use the Notification API.
- * No further registration is needed in order to use the Notification API and start writing sources and events.
- * More advanced extensions that also want to use any of the Widget API, Control API or Sensor API must also register
- * information in the registration table. This should be done for each host application that the extension wants to interact with.
- * In order to find out what host applications are available and what capabilities they support, the extension should use the
- * capability API <a href="#Capabilities">Using the capability API</a>.
- * The URI of the registration table is defined in the ApiRegistration interface {@link ApiRegistration#URI} and
- * the table schema is defined in the ApiRegistrationColumns interface {@link ApiRegistrationColumns}. The extension should provide
- * the host application package name and indicate what APIs it will use.
- * </p>
  * <a name="Capabilities"></a>
  * <h3>Using the capabilities API</h3>
  * <p>
  * This API is an Android content provider that provides information about the capabilities of the accessories. The information is
  * provided by the host applications and are used by the extensions to obtain necessary information in order to interact with the
  * accessories through the Control, Sensor and Widget APIs. The content provider contains the tables shown in the picture below.
- * <img src="../../../../../../../public_documentation/images/capabilities_database.png" alt="Operating context" border="1" />
+ * </p>
+ * <img src="../../../../../../../images/capabilities_database.png" alt="Operating context" border="1" />
+ * <p>
  * For each accessory there is a corresponding record in the host_application table. A Particular host application is identified
  * by its package name. For each host application there is one or more device records in the device table.
  * A particular device can support zero or more displays, sensors, leds and inputs, defined in the display, sensor, led and input
- * tables respectively There is a sensor_type table describing each type of sensor and keypad table describing the capabilities if
+ * tables respectively. There is a sensor_type table describing each type of sensor and keypad table describing the capabilities if
  * the keypads of each input type. The capabilities tables are accessible through the content provider.
  * </p>
  * <p> Capability URI's and description
@@ -95,15 +88,72 @@ import android.provider.BaseColumns;
  * It is also possible to use a view that returns all capabilities in a single query.
  * The URI is {@link Capabilities#URI}.
  * </p>
- * * <a name="Security"></a>
+ * <a name="Registration"></a>
+ * <h3>Extension registration</h3>
+ * <p>
+ * Before an extension can use an accessory, the extension must use the registration API content provider
+ * to insert a record in the extension table. The URI is defined in the Extension interface {@link Extension#URI} and
+ * the table scheme is defined in the ExtensionColumns interface {@link ExtensionColumns}.
+ * </p>
+ * <img src="../../../../../../../images/registration_database.png" alt="Operating context" border="1" />
+ * <p>
+ * After inserting a record in the extensions table, the extension is ready to use the Notification API.
+ * No further registration is needed in order to use the Notification API and start writing sources and events.
+ * More advanced extensions that also want to use any of the Widget API, Control API or Sensor API must also register
+ * information in the registration table. This should be done for each host application that the extension wants to interact with.
+ * In order to find out what host applications are available and what capabilities they support, the extension should use the
+ * <a href="#Capabilities">capability API</a>.
+ * The URI of the registration table is defined in the ApiRegistration interface {@link ApiRegistration#URI} and
+ * the table schema is defined in the ApiRegistrationColumns interface {@link ApiRegistrationColumns}. The extension should provide
+ * the host application package name and indicate what APIs it will use.
+ * </p>
+ * <p>
+ * Before an application can register itself as an extension, there must be at least one host application installed on the phone.
+ * This is to prevent that extensions start writing data into the databases when there are no host applications (user has no accessories).
+ * </p>
+ * <p>
+ * The application should register upon reception of the
+ * {@link Intents#EXTENSION_REGISTER_REQUEST_INTENT} intent.
+ * This intent is broadcasted when a new application is installed and when a new host application
+ * has added its capabilities to the tables.
+ * </p>
+ * <a name="configActivity"/>
+ * <h3>User extension configuration</h3>
+ * <p>
+ * Smart Extension apps may require configuration by the user before they can fully function.
+ * For example, the end user might need to login to a service on the Internet before events can be retrieved.
+ * The Smart Extension app is responsible for providing this configuration UI to be displayed.
+ * </p>
+ * <p>
+ * Host applications have their own configuration UIs from within the configuration UIs of registered
+ * Smart Extension apps can be reached.
+ * When registering to the Smart Connect, there is a column in the extension table called
+ * configurationActivity.
+ * If your Smart Extension app needs to be configured after it is registered, insert your Android
+ * Activity class name in this column.
+ * </p>
+ * <pre class="prettyprint">
+ * ...
+ * String configName = new ComponentName(getPackageName(),
+ * RssPluginConfig.class.getName()).flattenToShortString();
+ * values.put(ExtensionColumns.CONFIGURATION_ACTIVITY, configName);
+ * ...
+ * cr.insert(Extension.URI, values);
+ * </pre>
+ * <p>
+ * When the user wishes to launch your configuration UI, the host application will launch the registered Activity.
+ * </p>
+ * <a name="Security"></a>
  * <h3>Security</h3>
- * Each extension that which to interact with the Registration &amp; Capabilities API should
+ * <p>
+ * Each extension that wants to interact with the Registration &amp; Capabilities API should
  * specify a specific plug-in permission in their manifest file {@link Registration#EXTENSION_PERMISSION}.
  * The API implements a security mechanism that ensure that each extension only can access their own
  * registration and notification data. Sharing information between extensions can be obtained for extensions
  * that use the <i>sharedUserId</i> mechanism, however this approach is not recommended.
  * Extensions do not have permission to write data in the capability tables, only host applications
  * have write access.
+ * </p>
  * <p>
  * Android Intents are sent when interaction with the extension is needed.
  * See the documentation of the Control API, Widget API, Sensor API and
@@ -128,13 +178,6 @@ import android.provider.BaseColumns;
 public class Registration {
 
     /**
-     * @hide This class is only intended as a utility class containing declared constants
-     * that will be used by plug-in developers.
-     */
-    protected Registration() {
-    }
-
-    /**
      * All extensions should add in their AndroidManifest.xml a <uses-permission>
      * tag to use this permission. The purpose is to indicate to the end user
      * the application containing the extension interacts with the registration API.
@@ -142,7 +185,6 @@ public class Registration {
      * @since 1.0
      */
     public static final String EXTENSION_PERMISSION = "com.sonyericsson.extras.liveware.aef.EXTENSION_PERMISSION";
-
     /**
      * Permission used by host applications;
      * Extensions shall use this permission to enforce security when sending intents to
@@ -151,20 +193,25 @@ public class Registration {
      * @since 1.0
      */
     public static final String HOSTAPP_PERMISSION = "com.sonyericsson.extras.liveware.aef.HOSTAPP_PERMISSION";
-
     /**
      * Authority for the Registration provider
      *
      * @since 1.0
      */
     public static final String AUTHORITY = "com.sonyericsson.extras.liveware.aef.registration";
-
     /**
      * Base URI for the Registration provider
      *
      * @since 1.0
      */
     protected static final Uri BASE_URI = Uri.parse("content://" + AUTHORITY);
+
+    /**
+     * @hide This class is only intended as a utility class containing declared constants
+     * that will be used by plug-in developers.
+     */
+    protected Registration() {
+    }
 
     /**
      * Broadcast Intents sent to extensions by the host applications
@@ -386,6 +433,22 @@ public class Registration {
         static final String EXTENSION_ICON_URI = "extensionIconUri";
 
         /**
+         * URI of the icon representing the extension.
+         * This icon is used on the accessory UI.
+         * The size is 48x48 pixels.
+         * <p/>
+         * <p/>
+         * TYPE: TEXT
+         * </P>
+         * <p/>
+         * PRESENCE: OPTIONAL
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String EXTENSION_48PX_ICON_URI = "extension48PxIconUri";
+
+        /**
          * URI of the monochrome icon representing the extension.
          * This icon is used on the accessory UI.
          * The size is 18x18 pixels
@@ -443,13 +506,35 @@ public class Registration {
          * <p/>
          * TYPE: TEXT
          * </P>
-         * * <P>
+         * <p/>
          * PRESENCE: OPTIONAL (REQUIRED if shared user id is used by extension)
          * </P>
          *
          * @since 1.0
          */
         static final String PACKAGE_NAME = "packageName";
+
+        /**
+         * Specifies the preferred launch mode for extensions that supports both the
+         * Control and the Notification API.
+         * This value is ignored for extensions that only supports one of these APIs.
+         * <p/>
+         * TYPE: INTEGER (int)
+         * </P>
+         * <p/>
+         * ALLOWED VALUES:
+         * <ul>
+         * <li>{@link LaunchMode#CONTROL} (default)</li>
+         * <li>{@link LaunchMode#NOTIFICATION}</li>
+         * </ul>
+         * <p/>
+         * PRESENCE: OPTIONAL (REQUIRED if shared user id is used by extension)
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String LAUNCH_MODE = "launchMode";
+
     }
 
     /**
@@ -554,6 +639,42 @@ public class Registration {
          * @since 1.0
          */
         static final String SENSOR_API_VERSION = "sensorApiVersion";
+
+        /**
+         * Indicates if the extension (control) supports
+         * Active Low Power. In such cases the extension must
+         * provide a black and white screen to the accessory
+         * This should be done through a XML layout.
+         * <p/>
+         * <p/>
+         * TYPE: BOOLEAN
+         * </P>
+         * <p/>
+         * PRESENCE: OPTIONAL (Default false)
+         * </P>
+         *
+         * @see Control.Intents#CONTROL_ACTIVE_POWER_SAVE_MODE_STATUS_CHANGED_INTENT
+         * @see DisplayColumns#SUPPORTS_LOW_POWER_MODE
+         * @since 2.0
+         */
+        static final String LOW_POWER_SUPPORT = "lowPowerSupport";
+
+        /**
+         * If true presses on the {@link Control.KeyCodes#KEYCODE_BACK} will be sent to the Control
+         * extension in {@link Control.Intents#CONTROL_KEY_EVENT_INTENT} intents.
+         * This allows the Control extension to implements its own handling.
+         * If false a press on the {@link Control.KeyCodes#KEYCODE_BACK} will stop the control.
+         * <p/>
+         * <p/>
+         * TYPE: BOOLEAN
+         * </P>
+         * <p/>
+         * PRESENCE: OPTIONAL (Default false)
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String CONTROL_BACK_INTERCEPT = "controlBackIntercept";
     }
 
     /**
@@ -890,6 +1011,22 @@ public class Registration {
          * @since 1.0
          */
         static final String ACCESSORY_CONNECTED = "accessory_connected";
+
+        /**
+         * Specifies the XML layout elements that are supported on this device.
+         * <p/>
+         * <p/>
+         * TYPE: INTEGER (int, bit field see {@link LayoutSupport}.
+         * </P>
+         * <p/>
+         * PRESENCE: OPTIONAL (Default 0)
+         * </P>
+         *
+         * @see Control.Intents#EXTRA_DATA_XML_LAYOUT
+         * @see Widget.Intents#EXTRA_DATA_XML_LAYOUT
+         * @since 2.0
+         */
+        static final String LAYOUT_SUPPORT = "layoutSupport";
     }
 
     /**
@@ -1030,6 +1167,50 @@ public class Registration {
          * @since 1.0
          */
         static final String MOTION_TOUCH = "motionTouch";
+
+        /**
+         * Indicates if the display is a real display or an emulated display
+         * to provide compatibility with other accessories.
+         * <p/>
+         * TYPE: BOOLEAN
+         * </P>
+         * <p/>
+         * PRESENCE: OPTIONAL (Default value is FALSE)
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String IS_EMULATED = "isEmulated";
+
+        /**
+         * Indicates if the display supports active low power mode.
+         * <p/>
+         * <p/>
+         * TYPE: BOOLEAN
+         * </P>
+         * <p/>
+         * PRESENCE: OPTIONAL (Default value is FALSE)
+         * </P>
+         *
+         * @since 2.0
+         */
+        static final String SUPPORTS_LOW_POWER_MODE = "supportsLowPowerMode";
+
+        /**
+         * Indicates the number of menu items supported by the display.
+         * 0 means that the accessory does not support showing a menu on this display.
+         * <p/>
+         * <p/>
+         * TYPE: INTEGER (int)
+         * </P>
+         * <p/>
+         * PRESENCE: OPTIONAL (Default value is 0)
+         * </P>
+         *
+         * @see Control.Intents#CONTROL_MENU_SHOW
+         * @since 2.0
+         */
+        static final String MENU_ITEMS = "menuItems";
     }
 
     /**
@@ -1092,7 +1273,7 @@ public class Registration {
          * The sensor resolution
          * <p/>
          * <p/>
-         * TYPE: INTEGER (int)
+         * TYPE: REAL (float)
          * </P>
          * <p/>
          * PRESENCE: OPTIONAL
@@ -1120,7 +1301,7 @@ public class Registration {
          * The maximum range of the sensor
          * <p/>
          * <p/>
-         * TYPE: INTEGER (int)
+         * TYPE: REAL (float)
          * </P>
          * <p/>
          * PRESENCE: OPTIONAL
@@ -1166,7 +1347,7 @@ public class Registration {
          * are available
          * <p/>
          * <p/>
-         * TYPE: INTEGER (int) (0= Not supported, 1= Supported)
+         * TYPE: SHORT INTEGER (short) (0= Not supported, 1= Supported)
          * </P>
          * <p/>
          * PRESENCE: OPTIONAL
@@ -1392,7 +1573,7 @@ public class Registration {
          * The Type
          * <p/>
          * <p/>
-         * TYPE: TEXT
+         * TYPE: TEXT (see {@link KeyPadType for allowed values}
          * </P>
          * <p/>
          * PRESENCE: REQUIRED
@@ -1401,5 +1582,137 @@ public class Registration {
          * @since 1.0
          */
         static final String TYPE = "type";
+    }
+
+    /**
+     * Specifies which API that shall be started when launching the extension.
+     */
+    public interface LaunchMode {
+        /**
+         * The Control API shall be started when launching the extension.
+         *
+         * @since 2.0
+         */
+        static final int CONTROL = 0;
+
+        /**
+         * The Notification API shall be started when launching the extension.
+         *
+         * @since 2.0
+         */
+        static final int NOTIFICATION = 1;
+    }
+
+    /**
+     * Bit field specifiers for supported layout elements.
+     */
+    public interface LayoutSupport {
+        /**
+         * Bit to indicate that android.widget.TextView is supported.
+         *
+         * @since 2.0
+         */
+        static final int TEXT_VIEW = 1;
+
+        /**
+         * Bit to indicate that android.widget.ImageView is supported.
+         *
+         * @since 2.0
+         */
+        static final int IMAGE_VIEW = 1 << 1;
+
+        /**
+         * Bit to indicate that android.widget.ListView is supported.
+         *
+         * @since 2.0
+         */
+        static final int LIST_VIEW = 1 << 2;
+
+        /**
+         * Bit to indicate that android.widget.Gallery is supported.
+         *
+         * @since 2.0
+         */
+        static final int GALLERY = 1 << 3;
+    }
+
+    /**
+     * Key pad type specifiers
+     */
+    public interface KeyPadType {
+
+        /**
+         * Play key. Corresponds to {@link Control.KeyCodes#KEYCODE_PLAY}.
+         */
+        static final String PLAY = "Play";
+
+        /**
+         * Next key. Corresponds to {@link Control.KeyCodes#KEYCODE_NEXT}.
+         */
+        static final String NEXT = "Next";
+
+        /**
+         * Previous key. Corresponds to {@link Control.KeyCodes#KEYCODE_PREVIOUS}.
+         */
+        static final String PREVIOUS = "Previous";
+
+        /**
+         * Volume down key. Corresponds to {@link Control.KeyCodes#KEYCODE_VOLUME_DOWN}.
+         */
+        static final String VOLUME_DOWN = "Volume down";
+
+        /**
+         * Volume up key. Corresponds to {@link Control.KeyCodes#KEYCODE_VOLUME_UP}.
+         */
+        static final String VOLUME_UP = "Volume up";
+
+        /**
+         * Action key. Corresponds to {@link Control.KeyCodes#KEYCODE_ACTION}.
+         */
+        static final String ACTION = "App";
+
+        /**
+         * Back key. Corresponds to {@link Control.KeyCodes#KEYCODE_BACK}.
+         */
+        static final String BACK = "Back";
+    }
+
+    /**
+     * Definitions of sensor types
+     */
+    public interface SensorTypeValue {
+        /**
+         * Constant defining the sensor type Accelerometer.
+         * Sensor data is sent as an array of 3 float values representing
+         * the acceleration on the x-axis, y-axis and z-axis respectively.
+         * All values are in SI units (m/s^2)
+         * For more information about the accelerometer sensor type,
+         * see {@link android.hardware.Sensor#TYPE_ACCELEROMETER}
+         *
+         * @since 1.0
+         */
+        static final String ACCELEROMETER = "Accelerometer";
+
+        /**
+         * Constant defining the sensor type Light.
+         * Sensor data is sent as one float value representing
+         * the light level in SI lux units.
+         * For more information about the light sensor type,
+         * see {@link android.hardware.Sensor#TYPE_LIGHT}
+         *
+         * @since 1.0
+         */
+        static final String LIGHT = "Light";
+
+        /**
+         * Constant defining the sensor type Magnetic Field. Sensor data is sent
+         * as an array of 3 float values representing the ambient geomagnetic
+         * field for all three physical axes (x, y, z) in μT. For more
+         * information about the magnetic field sensor type, see
+         * {@link android.hardware.Sensor#TYPE_MAGNETIC_FIELD}
+         *
+         * @since 2.0
+         */
+        static final String MAGNETIC_FIELD = "MagneticField";
     }
 }

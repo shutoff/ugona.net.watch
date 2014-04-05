@@ -47,6 +47,8 @@ import com.sonyericsson.extras.liveware.aef.registration.Registration.Device;
 import com.sonyericsson.extras.liveware.aef.registration.Registration.DeviceColumns;
 import com.sonyericsson.extras.liveware.aef.widget.Widget;
 import com.sonyericsson.extras.liveware.extension.util.control.ControlExtension;
+import com.sonyericsson.extras.liveware.extension.util.control.ControlListItem;
+import com.sonyericsson.extras.liveware.extension.util.control.ControlObjectClickEvent;
 import com.sonyericsson.extras.liveware.extension.util.control.ControlTouchEvent;
 import com.sonyericsson.extras.liveware.extension.util.registration.IRegisterCallback;
 import com.sonyericsson.extras.liveware.extension.util.registration.RegisterExtensionTask;
@@ -62,40 +64,15 @@ import java.util.Iterator;
  */
 public abstract class ExtensionService extends Service implements IRegisterCallback {
 
-    private class IntentRunner implements Runnable {
-        protected Intent mIntent;
-        protected int mRunnerStartId;
-
-        IntentRunner(Intent intent, int startId) {
-            mIntent = intent;
-            mRunnerStartId = startId;
-        }
-
-        /**
-         * Does nothing should be overridden
-         */
-        public void run() {
-        }
-    }
-
     public static final int INVALID_ID = -1;
-
-    private RegisterExtensionTask mRegisterTask = null;
-
     private final String mExtensionKey;
-
+    private RegisterExtensionTask mRegisterTask = null;
     private RegistrationInformation mRegistrationInformation;
-
     private HashMap<String, WidgetExtension> mWidgets = new HashMap<String, WidgetExtension>();
-
     private HashMap<String, ControlExtension> mControls = new HashMap<String, ControlExtension>();
-
     private int mStartId;
-
     private Handler mHandler;
-
     private boolean mPendingNewRegistration = false;
-
     private boolean mUpdateSourceRegistration = true;
 
     /**
@@ -139,7 +116,6 @@ public abstract class ExtensionService extends Service implements IRegisterCallb
     public void onStart(Intent intent, int startId) {
     }
 
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null) {
@@ -156,7 +132,8 @@ public abstract class ExtensionService extends Service implements IRegisterCallb
                         onLocaleChanged();
                         stopSelfCheck();
                     } else if (Registration.Intents.ACCESSORY_CONNECTION_INTENT.equals(action)) {
-                        int status = mIntent.getIntExtra(Registration.Intents.EXTRA_CONNECTION_STATUS, -1);
+                        int status = mIntent.getIntExtra(
+                                Registration.Intents.EXTRA_CONNECTION_STATUS, -1);
                         onConnectionChanged(status == Registration.AccessoryConnectionStatus.STATUS_CONNECTED);
                         if (status == Registration.AccessoryConnectionStatus.STATUS_DISCONNECTED) {
                             // Accessory disconnected.
@@ -168,16 +145,19 @@ public abstract class ExtensionService extends Service implements IRegisterCallb
                             || Notification.Intents.REFRESH_REQUEST_INTENT.equals(action)) {
                         handleNotificationIntent(mIntent);
                         // Check if service shall be stopped.
-                        // Assume accessory connected as it sent something to us.
+                        // Assume accessory connected as it sent something to
+                        // us.
                         stopSelfCheck(true);
                     } else if (Widget.Intents.WIDGET_START_REFRESH_IMAGE_INTENT.equals(action)
                             || Widget.Intents.WIDGET_STOP_REFRESH_IMAGE_INTENT.equals(action)
                             || Widget.Intents.WIDGET_ONTOUCH_INTENT.equals(action)
+                            || Widget.Intents.WIDGET_OBJECT_CLICK_EVENT_INTENT.equals(action)
                             || WidgetExtension.SCHEDULED_REFRESH_INTENT.equals(action)) {
                         handleWidgetIntent(mIntent);
 
                         // Check if service shall be stopped.
-                        // Assume accessory connected as it sent something to us.
+                        // Assume accessory connected as it sent something to
+                        // us.
                         stopSelfCheck(true);
                     } else if (Control.Intents.CONTROL_START_INTENT.equals(action)
                             || Control.Intents.CONTROL_STOP_INTENT.equals(action)
@@ -186,15 +166,23 @@ public abstract class ExtensionService extends Service implements IRegisterCallb
                             || Control.Intents.CONTROL_ERROR_INTENT.equals(action)
                             || Control.Intents.CONTROL_KEY_EVENT_INTENT.equals(action)
                             || Control.Intents.CONTROL_TOUCH_EVENT_INTENT.equals(action)
+                            || Control.Intents.CONTROL_OBJECT_CLICK_EVENT_INTENT.equals(action)
+                            || Control.Intents.CONTROL_LIST_REQUEST_ITEM_INTENT.equals(action)
+                            || Control.Intents.CONTROL_LIST_ITEM_CLICK_INTENT.equals(action)
+                            || Control.Intents.CONTROL_LIST_REFRESH_REQUEST_INTENT.equals(action)
+                            || Control.Intents.CONTROL_LIST_ITEM_SELECTED_INTENT.equals(action)
+                            || Control.Intents.CONTROL_MENU_ITEM_SELECTED.equals(action)
                             || Control.Intents.CONTROL_SWIPE_EVENT_INTENT.equals(action)) {
                         handleControlIntent(mIntent);
                         // Check if service shall be stopped.
-                        // Assume accessory connected as it sent something to us.
+                        // Assume accessory connected as it sent something to
+                        // us.
                         stopSelfCheck(true);
                     }
                 }
             };
-            // post on handler to return quicker since started from broadcast receiver
+            // post on handler to return quicker since started from broadcast
+            // receiver
             mHandler.post(runner);
         }
 
@@ -221,9 +209,8 @@ public abstract class ExtensionService extends Service implements IRegisterCallb
     }
 
     /**
-     * Perform extension registration in background
-     * <p/>
-     * Override this method to do anything else when locale change
+     * Perform extension registration in background Override this method to do
+     * anything else when locale change
      *
      * @see #onRegisterResult()
      */
@@ -242,9 +229,8 @@ public abstract class ExtensionService extends Service implements IRegisterCallb
     }
 
     /**
-     * Perform extension registration in background
-     * <p/>
-     * Override this method to handle registration
+     * Perform extension registration in background Override this method to
+     * handle registration
      *
      * @see #onRegisterResult()
      */
@@ -299,9 +285,8 @@ public abstract class ExtensionService extends Service implements IRegisterCallb
     }
 
     /**
-     * Called after extension registration
-     * <p/>
-     * Override this method if you want to take actions after registration.
+     * Called after extension registration Override this method if you want to
+     * take actions after registration.
      *
      * @param result True on register success, false otherwise
      */
@@ -320,9 +305,8 @@ public abstract class ExtensionService extends Service implements IRegisterCallb
     }
 
     /**
-     * Handle VIEW_EVENT_INTENT.
-     * <p/>
-     * Override this method if this is a notification extension
+     * Handle VIEW_EVENT_INTENT. Override this method if this is a notification
+     * extension
      *
      * @param intent The view intent
      * @see #getRequiredNotificationApiVersion()
@@ -334,9 +318,8 @@ public abstract class ExtensionService extends Service implements IRegisterCallb
     /**
      * Handle REFRESH_REQUEST_INTENT. Sync extension data in this callback. This
      * is only relevant for extensions that aren't always up to date, like
-     * polling extensions.
-     * <p/>
-     * Override this method if this is a notification extension
+     * polling extensions. Override this method if this is a notification
+     * extension
      *
      * @see #getRequiredNotificationApiVersion()
      */
@@ -609,7 +592,8 @@ public abstract class ExtensionService extends Service implements IRegisterCallb
                 // If the widget was stopped, but there was a scheduled refresh
                 // waiting to be processed this would start the widget again.
                 if (Dbg.DEBUG) {
-                    Dbg.d("No widget object for: " + hostAppPackageName + ". Ignoring scheduled refersh.");
+                    Dbg.d("No widget object for: " + hostAppPackageName
+                            + ". Ignoring scheduled refersh.");
                 }
                 return;
             }
@@ -677,7 +661,12 @@ public abstract class ExtensionService extends Service implements IRegisterCallb
             }
 
             widget.onTouch(type, x, y);
+        } else if (Widget.Intents.WIDGET_OBJECT_CLICK_EVENT_INTENT.equals(action)) {
+            int type = intent.getIntExtra(Widget.Intents.EXTRA_EVENT_TYPE, -1);
+            int layoutReference = intent.getIntExtra(Widget.Intents.EXTRA_LAYOUT_REFERENCE, -1);
+            widget.onObjectClick(type, layoutReference);
         }
+
     }
 
     /**
@@ -777,6 +766,42 @@ public abstract class ExtensionService extends Service implements IRegisterCallb
             control.onTouch(event);
         } else if (Control.Intents.CONTROL_SWIPE_EVENT_INTENT.equals(action)) {
             control.onSwipe(intent.getIntExtra(Control.Intents.EXTRA_SWIPE_DIRECTION, -1));
+        } else if (Control.Intents.CONTROL_OBJECT_CLICK_EVENT_INTENT.equals(action)) {
+
+            ControlObjectClickEvent event = new ControlObjectClickEvent(intent.getIntExtra(
+                    Control.Intents.EXTRA_CLICK_TYPE, -1), intent.getLongExtra(
+                    Control.Intents.EXTRA_TIMESTAMP, 0), intent.getIntExtra(
+                    Control.Intents.EXTRA_LAYOUT_REFERENCE, -1));
+
+            control.onObjectClick(event);
+        } else if (Control.Intents.CONTROL_LIST_REQUEST_ITEM_INTENT.equals(action)) {
+            control.onRequestListItem(
+                    intent.getIntExtra(Control.Intents.EXTRA_LAYOUT_REFERENCE, -1),
+                    intent.getIntExtra(Control.Intents.EXTRA_LIST_ITEM_POSITION, -1));
+        } else if (Control.Intents.CONTROL_LIST_ITEM_CLICK_INTENT.equals(action)) {
+            ControlListItem listItem = new ControlListItem();
+            listItem.layoutReference = intent.getIntExtra(Control.Intents.EXTRA_LAYOUT_REFERENCE,
+                    -1);
+            listItem.listItemId = intent.getIntExtra(Control.Intents.EXTRA_LIST_ITEM_ID, -1);
+            listItem.listItemPosition = intent.getIntExtra(
+                    Control.Intents.EXTRA_LIST_ITEM_POSITION, -1);
+
+            control.onListItemClick(listItem,
+                    intent.getIntExtra(Control.Intents.EXTRA_CLICK_TYPE, -1),
+                    intent.getIntExtra(Control.Intents.EXTRA_LIST_ITEM_LAYOUT_REFERENCE, -1));
+        } else if (Control.Intents.CONTROL_LIST_ITEM_SELECTED_INTENT.equals(action)) {
+            ControlListItem listItem = new ControlListItem();
+            listItem.layoutReference = intent.getIntExtra(Control.Intents.EXTRA_LAYOUT_REFERENCE,
+                    -1);
+            listItem.listItemId = intent.getIntExtra(Control.Intents.EXTRA_LIST_ITEM_ID, -1);
+            listItem.listItemPosition = intent.getIntExtra(
+                    Control.Intents.EXTRA_LIST_ITEM_POSITION, -1);
+
+            control.onListItemSelected(listItem);
+        } else if (Control.Intents.CONTROL_LIST_REFRESH_REQUEST_INTENT.equals(action)) {
+            Dbg.d("List refresh");
+        } else if (Control.Intents.CONTROL_MENU_ITEM_SELECTED.equals(action)) {
+            control.onMenuItemSelected(intent.getIntExtra(Control.Intents.EXTRA_MENU_ITEM_ID, -1));
         }
     }
 
@@ -836,5 +861,21 @@ public abstract class ExtensionService extends Service implements IRegisterCallb
      */
     protected void onControlError(String hostAppPackageName, int errorCode) {
 
+    }
+
+    private class IntentRunner implements Runnable {
+        protected Intent mIntent;
+        protected int mRunnerStartId;
+
+        IntentRunner(Intent intent, int startId) {
+            mIntent = intent;
+            mRunnerStartId = startId;
+        }
+
+        /**
+         * Does nothing should be overridden
+         */
+        public void run() {
+        }
     }
 }

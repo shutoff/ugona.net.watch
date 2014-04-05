@@ -56,29 +56,18 @@ import java.io.IOException;
  */
 public class SmartWatchWidgetImage {
 
-    private final Bitmap mBitmap;
-
-    private Bitmap mIconBitmap;
-
-    private final Canvas mCanvas;
-
-    private String mText;
-
-    private int mBadgeCount;
-
-    private int mInnerLayoutResid;
-
     protected final Context mContext;
-
     protected final BitmapFactory.Options mBitmapOptions;
-
     protected final int mOuterWidth;
-
     protected final int mOuterHeight;
-
     protected final int mInnerWidth;
-
     protected final int mInnerHeight;
+    private final Bitmap mBitmap;
+    private final Canvas mCanvas;
+    private Bitmap mIconBitmap;
+    private String mText;
+    private int mBadgeCount;
+    private int mInnerLayoutResid;
 
     /**
      * Initiate the SmartWatch widget image.

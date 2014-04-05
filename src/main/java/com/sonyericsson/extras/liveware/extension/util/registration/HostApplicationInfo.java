@@ -145,7 +145,7 @@ public class HostApplicationInfo {
      * Get the id.
      *
      * @return The id.
-     * @see egistration.HostAppColumns.#_ID
+     * @see Registration.HostAppColumns.#_ID
      */
     public long getId() {
         return mId;
@@ -168,6 +168,17 @@ public class HostApplicationInfo {
      * @see Registration.HostAppColumns.#CONTROL_API_VERSION
      */
     public int getControlApiVersion() {
+        return mControlApiVersion;
+    }
+
+    /**
+     * Get the registration API version. Certain Registration values rely on SDK
+     * version 2.0 although they depend on no specific API version. This method
+     * returns the lowest safe API value.
+     *
+     * @see Registration.ExtensionColumns.#EXTENSION_48PX_ICON_URI
+     */
+    public int getRegistrationApiVersion() {
         return mControlApiVersion;
     }
 

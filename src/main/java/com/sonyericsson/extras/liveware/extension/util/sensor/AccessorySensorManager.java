@@ -1,5 +1,6 @@
 /*
  Copyright (c) 2011, Sony Ericsson Mobile Communications AB
+ Copyright (c) 2011-2013, Sony Mobile Communications AB
 
  All rights reserved.
 
@@ -73,7 +74,7 @@ public class AccessorySensorManager {
      * Get sensor.
      *
      * @param sensorType The string identifying the sensor type.
-     * @return The sensor.
+     * @return The sensor or null if no sensor found for the given value
      */
     public AccessorySensor getSensor(final String sensorType) {
         return getSensorForType(sensorType, null);
@@ -84,7 +85,7 @@ public class AccessorySensorManager {
      *
      * @param sensorType The string identifying the sensor type.
      * @param delicate   True if delicate, false otherwise.
-     * @return The sensor.
+     * @return The sensor or null if no sensor found for the given value
      */
     public AccessorySensor getSensor(final String sensorType, final boolean delicate) {
         return getSensorForType(sensorType, delicate);
@@ -124,7 +125,8 @@ public class AccessorySensorManager {
                     SensorColumns.SENSOR_TYPE_ID + "= ? AND " + SensorColumns.DEVICE_ID + " = ?",
                     new String[]{
                             Integer.toString(type.getId()), Long.toString(deviceId)
-                    }, null);
+                    }, null
+            );
             if (cursor != null && cursor.moveToFirst()) {
                 int id = cursor.getInt(cursor.getColumnIndexOrThrow(SensorColumns.SENSOR_ID));
                 boolean isInterruptSupported = cursor.getInt(cursor
@@ -239,8 +241,9 @@ public class AccessorySensorManager {
         try {
             cursor = mContext.getContentResolver().query(HostApp.URI, null,
                     HostAppColumns.PACKAGE_NAME + " = ?", new String[]{
-                    mHostAppPackageName
-            }, null);
+                            mHostAppPackageName
+                    }, null
+            );
             if (cursor != null && cursor.moveToFirst()) {
                 hostAppId = cursor.getLong(cursor.getColumnIndexOrThrow(HostAppColumns._ID));
             }

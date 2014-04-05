@@ -212,8 +212,9 @@ public class DeviceInfo {
             cursor = mContext.getContentResolver().query(
                     com.sonyericsson.extras.liveware.aef.registration.Registration.Sensor.URI,
                     null, SensorColumns.DEVICE_ID + " = ?", new String[]{
-                    Long.toString(mId)
-            }, null);
+                            Long.toString(mId)
+                    }, null
+            );
             while (cursor != null && cursor.moveToNext()) {
                 int sensorId = cursor.getInt(cursor.getColumnIndexOrThrow(SensorColumns.SENSOR_ID));
                 boolean isInterruptSupported = cursor.getInt(cursor
@@ -273,8 +274,9 @@ public class DeviceInfo {
         try {
             cursor = mContext.getContentResolver().query(Input.URI, null,
                     InputColumns.DEVICE_ID + " = ?", new String[]{
-                    Long.toString(mId)
-            }, null);
+                            Long.toString(mId)
+                    }, null
+            );
             while (cursor != null && cursor.moveToNext()) {
                 long id = cursor.getLong(cursor.getColumnIndexOrThrow(InputColumns._ID));
                 boolean enabled = cursor.getInt(cursor.getColumnIndexOrThrow(InputColumns.ENABLED)) == 1;
@@ -319,8 +321,9 @@ public class DeviceInfo {
         try {
             cursor = mContext.getContentResolver().query(SensorType.URI, null,
                     SensorTypeColumns._ID + " = ?", new String[]{
-                    Integer.toString(typeId)
-            }, null);
+                            Integer.toString(typeId)
+                    }, null
+            );
             if (cursor != null && cursor.moveToFirst()) {
                 boolean isDelicate = cursor.getInt(cursor
                         .getColumnIndexOrThrow(SensorTypeColumns.DELICATE_SENSOR_DATA)) == 1;
@@ -362,8 +365,9 @@ public class DeviceInfo {
         try {
             cursor = mContext.getContentResolver().query(KeyPad.URI, null,
                     KeyPadColumns._ID + " = ?", new String[]{
-                    Long.toString(id)
-            }, null);
+                            Long.toString(id)
+                    }, null
+            );
             if (cursor != null && cursor.moveToFirst()) {
                 String type = cursor.getString(cursor.getColumnIndexOrThrow(KeyPadColumns.TYPE));
                 keyPad = new KeyPadInfo(id, type);

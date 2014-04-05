@@ -129,8 +129,9 @@ public class SmartWirelessHeadsetProUtil {
         // draw cancel
         if (!hideCancel) {
             canvas.drawBitmap(cancelBitmap, DISPLAY_WIDTH - cancelBitmap.getWidth()
-                    - CONFIRM_PADDING, DISPLAY_HEIGHT - cancelBitmap.getHeight() - CONFIRM_PADDING,
-                    null);
+                            - CONFIRM_PADDING, DISPLAY_HEIGHT - cancelBitmap.getHeight() - CONFIRM_PADDING,
+                    null
+            );
         }
         return bitmap;
     }

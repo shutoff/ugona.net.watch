@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?><!-- No translation of sample extensions -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="app_name">Угона.НЕТ часы</string>
+    <!-- Title of preference activity -->
+    <string name="preference_activity_title">Настройки</string>
+    <!-- Configuration text shown in preferences -->
+    <string name="configuration_text">Настройки</string>
+    <!-- Extension name, shown in preferences -->
+    <string name="extension_name">Угона.НЕТ+</string>
+
+    <string name="extension_info">Угона.НЕТ</string>
+    <string name="car">Автомобиль</string>
+</resources>
