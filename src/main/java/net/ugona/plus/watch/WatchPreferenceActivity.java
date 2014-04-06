@@ -71,10 +71,10 @@ public class WatchPreferenceActivity extends Activity {
                 "id",
                 "name"
         }, null, null, null);
-        int count = c.getCount();
-        ids = new String[count];
-        names = new String[count];
-        if (c.moveToFirst()) {
+        if ((c != null) && c.moveToFirst()) {
+            int count = c.getCount();
+            ids = new String[count];
+            names = new String[count];
             count = 0;
             int i_id = c.getColumnIndex("id");
             int i_name = c.getColumnIndex("name");
@@ -87,8 +87,11 @@ public class WatchPreferenceActivity extends Activity {
                 if (!c.moveToNext())
                     break;
             }
+            c.close();
+        } else {
+            ids = new String[0];
+            names = new String[0];
         }
-        c.close();
 
         cars.setAdapter(new BaseAdapter() {
             @Override

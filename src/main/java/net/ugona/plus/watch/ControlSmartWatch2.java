@@ -33,8 +33,13 @@ Copyright (c) 2011-2013, Sony Mobile Communications AB
 package net.ugona.plus.watch;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -43,9 +48,6 @@ import com.sonyericsson.extras.liveware.aef.control.Control;
 import com.sonyericsson.extras.liveware.extension.util.ExtensionUtils;
 import com.sonyericsson.extras.liveware.extension.util.control.ControlExtension;
 import com.sonyericsson.extras.liveware.extension.util.control.ControlObjectClickEvent;
-import com.sonyericsson.extras.liveware.extension.util.control.ControlTouchEvent;
-import com.sonyericsson.extras.liveware.extension.util.control.ControlView;
-import com.sonyericsson.extras.liveware.extension.util.control.ControlView.OnClickListener;
 import com.sonyericsson.extras.liveware.extension.util.control.ControlViewGroup;
 
 /**
@@ -55,19 +57,32 @@ import com.sonyericsson.extras.liveware.extension.util.control.ControlViewGroup;
  */
 class ControlSmartWatch2 extends ControlExtension {
 
-    private static final int ANIMATION_DELTA_MS = 500;
-    private static final int SELECT_TOGGLER_MS = 2000;
+    static final String[] fields = new String[]{
+            Names.VOLTAGE_MAIN,
+            Names.VOLTAGE_RESERVED,
+            Names.BALANCE,
+            Names.TEMPERATURE,
+            Names.TEMP_SIFT,
+            Names.EVENT_TIME,
+            Names.GUARD,
+            Names.GUARD0,
+            Names.GUARD1,
+            Names.ZONE_ACCESSORY,
+            Names.ZONE_DOOR,
+            Names.ZONE_HOOD,
+            Names.ZONE_TRUNK,
+            Names.ZONE_IGNITION,
+            Names.INPUT1,
+            Names.INPUT2,
+            Names.INPUT3,
+            Names.INPUT4,
+            Names.AZ
+    };
     private static final int MENU_ITEM_0 = 0;
-    private static final int MENU_ITEM_1 = 1;
-    private static final int MENU_ITEM_2 = 2;
-    private static final int MENU_ITEM_3 = 3;
-    private static final int MENU_ITEM_4 = 4;
-    private static final int MENU_ITEM_5 = 5;
-    Bundle[] mMenuItemsText = new Bundle[3];
-    Bundle[] mMenuItemsIcons = new Bundle[3];
+    Bundle[] mMenuItemsText = new Bundle[1];
+    Bundle[] mMenuItemsIcons = new Bundle[1];
+    CarDrawable carDrawable;
     private Handler mHandler;
-    private boolean mIsShowingAnimation = false;
-    private Animation mAnimation = null;
     private ControlViewGroup mLayout = null;
     private boolean mTextMenu = false;
 
@@ -87,6 +102,7 @@ class ControlSmartWatch2 extends ControlExtension {
         mHandler = handler;
         setupClickables(context);
         initializeMenus();
+        carDrawable = new CarDrawable();
     }
 
     /**
@@ -115,19 +131,18 @@ class ControlSmartWatch2 extends ControlExtension {
         mMenuItemsText[0].putString(Control.Intents.EXTRA_MENU_ITEM_TEXT, "Item 1");
 
         mMenuItemsIcons[0] = new Bundle();
-        mMenuItemsIcons[0].putInt(Control.Intents.EXTRA_MENU_ITEM_ID, MENU_ITEM_3);
+        mMenuItemsIcons[0].putInt(Control.Intents.EXTRA_MENU_ITEM_ID, MENU_ITEM_0);
         mMenuItemsIcons[0].putString(Control.Intents.EXTRA_MENU_ITEM_ICON,
                 ExtensionUtils.getUriString(mContext, R.drawable.actions));
     }
 
+    ;
+
     @Override
     public void onDestroy() {
         Log.d(ExtensionService.LOG_TAG, "ControlSmartWatch onDestroy");
-        stopAnimation();
         mHandler = null;
     }
-
-    ;
 
     @Override
     public void onStart() {
@@ -143,81 +158,50 @@ class ControlSmartWatch2 extends ControlExtension {
     public void onResume() {
         Log.d(ExtensionService.LOG_TAG, "Starting animation");
 
-        Bundle b1 = new Bundle();
-        b1.putInt(Control.Intents.EXTRA_LAYOUT_REFERENCE, R.id.sample_control_text_1);
-        b1.putString(Control.Intents.EXTRA_TEXT, "1");
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(mContext);
+        String car_id = preferences.getString(State.ID, "");
 
-        Bundle b2 = new Bundle();
-        b2.putInt(Control.Intents.EXTRA_LAYOUT_REFERENCE, R.id.sample_control_text_2);
-        b2.putString(Control.Intents.EXTRA_TEXT, "2");
+        Bundle[] data = null;
+        Bitmap car = null;
 
-        Bundle b3 = new Bundle();
-        b3.putInt(Control.Intents.EXTRA_LAYOUT_REFERENCE, R.id.sample_control_text_3);
-        b3.putString(Control.Intents.EXTRA_TEXT, "3");
+        Uri uri = Uri.parse("content://net.ugona.plus/car#" + car_id);
+        Cursor c = mContext.getContentResolver().query(uri, fields, null, null, null);
+        if (c != null) {
+            c.moveToFirst();
+            car = carDrawable.getBitmap(mContext, c, 126, 176);
 
-        Bundle b4 = new Bundle();
-        b4.putInt(Control.Intents.EXTRA_LAYOUT_REFERENCE, R.id.sample_control_text_4);
-        b4.putString(Control.Intents.EXTRA_TEXT, "4");
+            Bundle b1 = new Bundle();
+            b1.putInt(Control.Intents.EXTRA_LAYOUT_REFERENCE, R.id.voltage);
+            b1.putString(Control.Intents.EXTRA_TEXT, CarDrawable.getString(c, Names.VOLTAGE_MAIN) + " V");
 
-        Bundle[] data = new Bundle[4];
+            Bundle b2 = new Bundle();
+            b2.putInt(Control.Intents.EXTRA_LAYOUT_REFERENCE, R.id.temperature);
+            String temp = "--";
+            try {
+                String[] temp_data = CarDrawable.getString(c, Names.TEMPERATURE).split(";");
+                int temp_value = Integer.parseInt(temp_data[0].split(":")[0]);
+                temp = (temp_value + CarDrawable.getLong(c, Names.TEMP_SIFT)) + "";
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            b2.putString(Control.Intents.EXTRA_TEXT, temp + " \u00B0C");
 
-        data[0] = b1;
-        data[1] = b2;
-        data[2] = b3;
-        data[3] = b4;
+            Bundle b3 = new Bundle();
+            b3.putInt(Control.Intents.EXTRA_LAYOUT_REFERENCE, R.id.balance);
+            b3.putString(Control.Intents.EXTRA_TEXT, CarDrawable.getString(c, Names.BALANCE));
+
+            data = new Bundle[3];
+
+            data[0] = b1;
+            data[1] = b2;
+            data[2] = b3;
+
+            c.close();
+        }
 
         showLayout(R.layout.control_2, data);
-
-        startAnimation();
-    }
-
-    @Override
-    public void onPause() {
-        Log.d(ExtensionService.LOG_TAG, "Stopping animation");
-        stopAnimation();
-    }
-
-    private void toggleAnimation() {
-        if (mIsShowingAnimation) {
-            stopAnimation();
-        } else {
-            startAnimation();
-        }
-    }
-
-    /**
-     * Start showing animation on control.
-     */
-    private void startAnimation() {
-        if (!mIsShowingAnimation) {
-            mIsShowingAnimation = true;
-            mAnimation = new Animation();
-            mAnimation.run();
-        }
-    }
-
-    /**
-     * Stop showing animation on control.
-     */
-    private void stopAnimation() {
-        if (mIsShowingAnimation) {
-            // Stop animation on accessory
-            if (mAnimation != null) {
-                mAnimation.stop();
-                mHandler.removeCallbacks(mAnimation);
-                mAnimation = null;
-            }
-            mIsShowingAnimation = false;
-        }
-    }
-
-    @Override
-    public void onTouch(final ControlTouchEvent event) {
-        Log.d(ExtensionService.LOG_TAG, "onTouch() " + event.getAction());
-        if (event.getAction() == Control.Intents.TOUCH_ACTION_RELEASE) {
-            Log.d(ExtensionService.LOG_TAG, "Toggling animation");
-            toggleAnimation();
-        }
+        if (car != null)
+            sendImage(R.id.car, car);
     }
 
     @Override
@@ -269,131 +253,8 @@ class ControlSmartWatch2 extends ControlExtension {
         View layout = inflater.inflate(R.layout.control_2
                 , null);
         mLayout = (ControlViewGroup) parseLayout(layout);
-        if (mLayout != null) {
-            ControlView upperLeft = mLayout.findViewById(R.id.sample_control_object_1);
-            upperLeft.setOnClickListener(new OnClickListener() {
-                @Override
-                public void onClick() {
-                    sendImage(R.id.sample_control_object_1, R.drawable.left_top);
-                    mHandler.postDelayed(new SelectToggler(R.id.sample_control_object_1,
-                            R.drawable.left_top), SELECT_TOGGLER_MS);
-                }
-            });
-            ControlView upperRight = mLayout.findViewById(R.id.sample_control_object_2);
-            upperRight.setOnClickListener(new OnClickListener() {
-                @Override
-                public void onClick() {
-                    sendImage(R.id.sample_control_object_2, R.drawable.right_top);
-                    mHandler.postDelayed(new SelectToggler(R.id.sample_control_object_2,
-                            R.drawable.right_top), SELECT_TOGGLER_MS);
-                }
-            });
-            ControlView bottomLeft = mLayout.findViewById(R.id.sample_control_object_3);
-            bottomLeft.setOnClickListener(new OnClickListener() {
-                @Override
-                public void onClick() {
-                    sendImage(R.id.sample_control_object_3, R.drawable.left_bottom);
-                    mHandler.postDelayed(new SelectToggler(R.id.sample_control_object_3,
-                            R.drawable.left_bottom), SELECT_TOGGLER_MS);
-                }
-            });
-            ControlView bottomRight = mLayout.findViewById(R.id.sample_control_object_4);
-            bottomRight.setOnClickListener(new OnClickListener() {
-                @Override
-                public void onClick() {
-                    sendImage(R.id.sample_control_object_4, R.drawable.right_bottom);
-                    mHandler.postDelayed(new SelectToggler(R.id.sample_control_object_4,
-                            R.drawable.right_bottom), SELECT_TOGGLER_MS);
-                }
-            });
-        }
-    }
-
-    private class SelectToggler implements Runnable {
-
-        private int mLayoutReference;
-        private int mResourceId;
-
-        SelectToggler(int layoutReference, int resourceId) {
-            mLayoutReference = layoutReference;
-            mResourceId = resourceId;
-        }
-
-        @Override
-        public void run() {
-            sendImage(mLayoutReference, mResourceId);
-        }
 
     }
 
-    /**
-     * The animation class shows an animation on the accessory. The animation
-     * runs until mHandler.removeCallbacks has been called.
-     */
-    private class Animation implements Runnable {
-
-        private int mIndex = 1;
-        private boolean mIsStopped = false;
-
-        /**
-         * Create animation.
-         */
-        Animation() {
-            mIndex = 1;
-        }
-
-        /**
-         * Stop the animation.
-         */
-        public void stop() {
-            mIsStopped = true;
-        }
-
-        @Override
-        public void run() {
-            int resourceId;
-            switch (mIndex) {
-                case 1:
-                    resourceId = R.drawable.generic_anim_1_icn;
-                    break;
-                case 2:
-                    resourceId = R.drawable.generic_anim_2_icn;
-                    break;
-                case 3:
-                    resourceId = R.drawable.generic_anim_3_icn;
-                    break;
-                case 4:
-                    resourceId = R.drawable.generic_anim_2_icn;
-                    break;
-                default:
-                    Log.e(ExtensionService.LOG_TAG, "mIndex out of bounds: " + mIndex);
-                    resourceId = R.drawable.generic_anim_1_icn;
-                    break;
-            }
-            mIndex++;
-            if (mIndex > 4) {
-                mIndex = 1;
-            }
-
-            if (!mIsStopped) {
-                updateAnimation(resourceId);
-            }
-            if (mHandler != null && !mIsStopped) {
-                mHandler.postDelayed(this, ANIMATION_DELTA_MS);
-            }
-        }
-
-        /**
-         * Update the animation on the accessory. Only updates the part of the
-         * screen which contains the animation.
-         *
-         * @param resourceId The new resource to show.
-         */
-        private void updateAnimation(int resourceId) {
-            sendImage(R.id.animatedImage, resourceId);
-        }
-    }
-
-    ;
 
 }
