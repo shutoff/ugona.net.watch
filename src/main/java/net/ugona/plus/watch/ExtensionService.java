@@ -65,6 +65,12 @@ public class ExtensionService extends com.sonyericsson.extras.liveware.extension
     public void onCreate() {
         super.onCreate();
         Log.d(LOG_TAG, "ExtensionService: onCreate");
+        Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+            @Override
+            public void uncaughtException(Thread thread, Throwable ex) {
+                State.print(ex);
+            }
+        });
     }
 
     @Override

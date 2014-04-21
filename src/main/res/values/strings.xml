@@ -10,4 +10,9 @@
 
     <string name="extension_info">Widget for Ugona.net</string>
     <string name="car">Car</string>
+    <string name="motor_on">Motor ON</string>
+    <string name="motor_off">Motor OFF</string>
+    <string name="valet_on">Valet ON</string>
+    <string name="valet_off">Valet OFF</string>
+    <string name="rub">R</string>
 </resources>

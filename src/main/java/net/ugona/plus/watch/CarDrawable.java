@@ -40,22 +40,23 @@ public class CarDrawable {
             "engine1",             // 23
             "engine1_blue",        // 24
             "ignition",            // 25
-            "ignition_red",        // 26
-            "lock_white",          // 27
-            "lock_white_widget",   // 28
-            "lock_blue",           // 29
-            "lock_blue_widget",    // 30
-            "valet",               // 31
-            "block",               // 32
-            "heater",              // 33
-            "heater_blue",         // 34
+            "ignition_blue",       // 26
+            "ignition_red",        // 27
+            "lock_white",          // 28
+            "lock_white_widget",   // 29
+            "lock_blue",           // 3-
+            "lock_blue_widget",    // 31
+            "valet",               // 32
+            "block",               // 33
+            "heater",              // 34
+            "heater_blue",         // 35
     };
     static Bitmap bitmap;
     Resources resources;
     int[] parts_id;
 
     CarDrawable() {
-        parts_id = new int[7];
+        parts_id = new int[6];
 
         parts_id[0] = 0;
         parts_id[1] = 0;
@@ -63,7 +64,6 @@ public class CarDrawable {
         parts_id[3] = 0;
         parts_id[4] = 0;
         parts_id[5] = 0;
-        parts_id[6] = 0;
     }
 
     static long getLong(Cursor c, String name) {
@@ -94,7 +94,6 @@ public class CarDrawable {
             upd |= setLayer(3, 0);
             upd |= setLayer(4, 0);
             upd |= setLayer(5, 0);
-            upd |= setLayer(6, 0);
         } else {
 
             boolean guard = getBoolean(c, Names.GUARD);
@@ -133,23 +132,21 @@ public class CarDrawable {
             if (az) {
                 upd |= setLayer(4, white ? 24 : 23);
             } else {
-                upd |= setLayer(4, 0);
+                int ignition_id = 0;
+                if (!az && (getBoolean(c, Names.INPUT3) || getBoolean(c, Names.ZONE_IGNITION)))
+                    ignition_id = guard ? 27 : (white ? 26 : 25);
+                upd |= setLayer(4, ignition_id);
             }
-
-            int ignition_id = 0;
-            if (!az && (getBoolean(c, Names.INPUT3) || getBoolean(c, Names.ZONE_IGNITION)))
-                ignition_id = guard ? 26 : 25;
-            upd |= setLayer(5, ignition_id);
 
             int state = 0;
             if (guard) {
-                state = white ? 30 : 28;
+                state = white ? 31 : 29;
             }
             if (guard0 && !guard1)
-                state = 31;
-            if (!guard0 && guard1)
                 state = 32;
-            upd |= setLayer(6, state);
+            if (!guard0 && guard1)
+                state = 33;
+            upd |= setLayer(5, state);
         }
         return upd;
     }

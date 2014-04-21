@@ -81,6 +81,8 @@ public class WatchPreferenceActivity extends Activity {
             for (; ; ) {
                 ids[count] = c.getString(i_id);
                 names[count] = c.getString(i_name);
+                if (names[count].equals(""))
+                    names[count] = getString(R.string.car) + " " + ids[count];
                 if (ids[count].equals(cur))
                     current = count;
                 count++;

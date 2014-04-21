@@ -10,4 +10,9 @@
 
     <string name="extension_info">Угона.НЕТ</string>
     <string name="car">Автомобиль</string>
+    <string name="motor_on">Завести двигатель</string>
+    <string name="motor_off">Остановить двигатель</string>
+    <string name="valet_on">Включить режим сервис</string>
+    <string name="valet_off">Выключить режим сервис</string>
+    <string name="rub">Р</string>
 </resources>
