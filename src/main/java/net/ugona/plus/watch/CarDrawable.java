@@ -14,56 +14,13 @@ import java.util.Date;
 public class CarDrawable {
 
     static final String PKG_NAME = "net.ugona.plus";
-    static final String[] drawables = {
-            "car_black",           // 1
-            "car_white",           // 2
-            "car_blue",            // 3
-            "car_red",             // 4
-            "doors_white",         // 5
-            "doors_blue",          // 6
-            "doors_red",           // 7
-            "doors_white_open",    // 8
-            "doors_blue_open",     // 9
-            "doors_red_open",      // 10
-            "hood_white",          // 11
-            "hood_blue",           // 12
-            "hood_red",            // 13
-            "hood_white_open",     // 14
-            "hood_blue_open",      // 15
-            "hood_red_open",       // 16
-            "trunk_white",         // 17
-            "trunk_blue",          // 18
-            "trunk_red",           // 19
-            "trunk_white_open",    // 20
-            "trunk_blue_open",     // 21
-            "trunk_red_open",      // 22
-            "engine1",             // 23
-            "engine1_blue",        // 24
-            "ignition",            // 25
-            "ignition_blue",       // 26
-            "ignition_red",        // 27
-            "lock_white",          // 28
-            "lock_white_widget",   // 29
-            "lock_blue",           // 3-
-            "lock_blue_widget",    // 31
-            "valet",               // 32
-            "block",               // 33
-            "heater",              // 34
-            "heater_blue",         // 35
-    };
+
     static Bitmap bitmap;
     Resources resources;
-    int[] parts_id;
+    String[] parts_id;
 
     CarDrawable() {
-        parts_id = new int[6];
-
-        parts_id[0] = 0;
-        parts_id[1] = 0;
-        parts_id[2] = 0;
-        parts_id[3] = 0;
-        parts_id[4] = 0;
-        parts_id[5] = 0;
+        parts_id = new String[9];
     }
 
     static long getLong(Cursor c, String name) {
@@ -87,30 +44,56 @@ public class CarDrawable {
         long last = getLong(c, Names.EVENT_TIME);
         Date now = new Date();
         boolean upd = false;
-        if (last < now.getTime() - 24 * 60 * 60 * 1000) {
-            upd = setLayer(0, 1);
-            upd |= setLayer(1, 0);
-            upd |= setLayer(2, 0);
-            upd |= setLayer(3, 0);
-            upd |= setLayer(4, 0);
-            upd |= setLayer(5, 0);
+        boolean doors4 = getBoolean(c, Names.DOORS_4);
+        if ((last < now.getTime() - 24 * 60 * 60 * 1000)) {
+            upd = setLayer(0, doors4 ? "car_black4" : "car_black");
+            upd |= setLayer(1);
+            upd |= setLayer(2);
+            upd |= setLayer(3);
+            upd |= setLayer(4);
+            upd |= setLayer(5);
+            upd |= setLayer(6);
+            upd |= setLayer(7);
+            upd |= setLayer(8);
         } else {
 
             boolean guard = getBoolean(c, Names.GUARD);
             boolean guard0 = getBoolean(c, Names.GUARD0);
             boolean guard1 = getBoolean(c, Names.GUARD1);
-
-            boolean white = !guard || (guard0 && guard1);
-
-            upd = setModeCar(!white, getBoolean(c, Names.ZONE_ACCESSORY));
-
-            boolean doors_open = getBoolean(c, Names.INPUT1);
-            boolean doors_alarm = getBoolean(c, Names.ZONE_DOOR);
-            if (white && doors_alarm) {
-                doors_alarm = false;
-                doors_open = true;
+            boolean card = false;
+            if (guard) {
+                long guard_t = getLong(c, Names.GUARD_TIME);
+                long card_t = getLong(c, Names.CARD);
+                if ((guard_t > 0) && (card_t > 0) && (card_t < guard_t))
+                    card = true;
             }
-            upd |= setModeOpen(0, !white, doors_open, doors_alarm);
+
+            boolean white = !guard || (guard0 && guard1) || card;
+
+            upd = setModeCar(!white, getBoolean(c, Names.ZONE_ACCESSORY), doors4);
+
+            if (doors4) {
+                boolean fl = getBoolean(c, Names.DOOR_FL);
+                upd |= setModeOpen(1, "door_fl", !white, fl, fl && guard, false);
+                boolean fr = getBoolean(c, Names.DOOR_FR);
+                upd |= setModeOpen(6, "door_fr", !white, fr, fr && guard, false);
+                boolean bl = getBoolean(c, Names.DOOR_BL);
+                upd |= setModeOpen(7, "door_bl", !white, bl, bl && guard, false);
+                boolean br = getBoolean(c, Names.DOOR_BR);
+                upd |= setModeOpen(8, "door_br", !white, br, br && guard, false);
+
+            } else {
+                boolean doors_open = getBoolean(c, Names.INPUT1);
+                boolean doors_alarm = getBoolean(c, Names.ZONE_DOOR);
+                if (white && doors_alarm) {
+                    doors_alarm = false;
+                    doors_open = true;
+                }
+                upd |= setModeOpen(1, "doors", !white, doors_open, doors_alarm, false);
+                upd |= setLayer(6);
+                upd |= setLayer(7);
+                upd |= setLayer(8);
+            }
 
             boolean hood_open = getBoolean(c, Names.INPUT4);
             boolean hood_alarm = getBoolean(c, Names.ZONE_HOOD);
@@ -118,7 +101,7 @@ public class CarDrawable {
                 hood_alarm = false;
                 hood_open = true;
             }
-            upd |= setModeOpen(1, !white, hood_open, hood_alarm);
+            upd |= setModeOpen(2, "hood", !white, hood_open, hood_alarm, doors4);
 
             boolean trunk_open = getBoolean(c, Names.INPUT2);
             boolean trunk_alarm = getBoolean(c, Names.ZONE_TRUNK);
@@ -126,26 +109,28 @@ public class CarDrawable {
                 trunk_alarm = false;
                 trunk_open = true;
             }
-            upd |= setModeOpen(2, !white, trunk_open, trunk_alarm);
+            upd |= setModeOpen(3, "trunk", !white, trunk_open, trunk_alarm, doors4);
 
             boolean az = getBoolean(c, Names.AZ);
             if (az) {
-                upd |= setLayer(4, white ? 24 : 23);
+                upd |= setLayer(4, "engine1", !white);
             } else {
-                int ignition_id = 0;
+                String ignition_id = null;
                 if (!az && (getBoolean(c, Names.INPUT3) || getBoolean(c, Names.ZONE_IGNITION)))
-                    ignition_id = guard ? 27 : (white ? 26 : 25);
+                    ignition_id = guard ? "ignition_red" : (white ? "ignition_blue" : "ignition");
                 upd |= setLayer(4, ignition_id);
             }
 
-            int state = 0;
+            String state = null;
             if (guard) {
-                state = white ? 31 : 29;
+                state = white ? "lock_blue" : "lock_white";
+                if (card)
+                    state = "lock_red";
             }
             if (guard0 && !guard1)
-                state = 32;
+                state = "valet";
             if (!guard0 && guard1)
-                state = 33;
+                state = "block";
             upd |= setLayer(5, state);
         }
         return upd;
@@ -168,38 +153,69 @@ public class CarDrawable {
             bitmap.eraseColor(Color.TRANSPARENT);
         }
         Canvas canvas = new Canvas(bitmap);
-        for (int part : parts_id) {
-            if (part == 0)
+        for (String part : parts_id) {
+            int id = resources.getIdentifier(part, "drawable", PKG_NAME);
+            if (id == 0)
                 continue;
-            int resID = resources.getIdentifier(drawables[part - 1], "drawable", PKG_NAME);
-            Drawable d = resources.getDrawable(resID);
+            Drawable d = resources.getDrawable(id);
             d.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
             d.draw(canvas);
         }
         return bitmap;
     }
 
-    boolean setLayer(int n, int id) {
-        if (parts_id[n] == id)
+    boolean setLayer(int n) {
+        if (parts_id[n] == null)
             return false;
-        parts_id[n] = id;
+        parts_id[n] = null;
         return true;
     }
 
-    boolean setModeCar(boolean guard, boolean alarm) {
-        int pos = guard ? 1 : 0;
-        if (alarm)
-            pos = 2;
-        return setLayer(0, pos + 2);
+    boolean setLayer(int n, String name) {
+        if (name == null) {
+            if (parts_id[n] == null)
+                return false;
+            parts_id[n] = null;
+            return true;
+        }
+        if (parts_id[n] == null) {
+            parts_id[n] = name;
+            return true;
+        }
+        if (parts_id[n].equals(name))
+            return false;
+        parts_id[n] = name;
+        return true;
     }
 
-    boolean setModeOpen(int group, boolean guard, boolean open, boolean alarm) {
-        int pos = guard ? 1 : 0;
+    boolean setLayer(int n, String name, boolean white) {
+        if (!white)
+            name += "_blue";
+        return setLayer(n, name);
+    }
+
+    boolean setModeCar(boolean guard, boolean alarm, boolean doors4) {
+        String pos = guard ? "car_blue" : "car_white";
         if (alarm)
-            pos = 2;
-        if (open)
-            pos += 3;
-        return setLayer(group + 1, group * 6 + pos + 5);
+            pos = "car_red";
+        if (doors4)
+            pos += "4";
+        return setLayer(0, pos);
+    }
+
+    boolean setModeOpen(int pos, String group, boolean guard, boolean open, boolean alarm, boolean doors4) {
+        if (alarm) {
+            group += "_red";
+        } else if (guard) {
+            group += "_blue";
+        } else {
+            group += "_white";
+        }
+        if (open || alarm)
+            group += "_open";
+        if (doors4)
+            group += "4";
+        return setLayer(pos, group);
     }
 
 }
