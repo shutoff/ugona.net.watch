@@ -153,4 +153,16 @@ public final class Names {
     static final String ZONE_INFO = "zone_info";
 
     static final String TIMERS_INFO = "timers";
+
+    static final String DOORS_4 = "doors4_";
+    static final String DOOR_FL = "door_fl";
+    static final String DOOR_FR = "door_fr";
+    static final String DOOR_BL = "door_bl";
+    static final String DOOR_BR = "door_br";
+
+    static final String GUARD_TIME = "guard_time_";
+    static final String HEATER = "heater";
+    static final String CARD = "card";
+    static final String CARD_EVENT = "card_event";
+    static final String CARD_TIME = "card_time";
 }
