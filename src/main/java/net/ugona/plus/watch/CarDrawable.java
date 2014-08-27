@@ -154,6 +154,9 @@ public class CarDrawable {
         }
         Canvas canvas = new Canvas(bitmap);
         for (String part : parts_id) {
+            if (part == null)
+                continue;
+            ;
             int id = resources.getIdentifier(part, "drawable", PKG_NAME);
             if (id == 0)
                 continue;

@@ -81,7 +81,12 @@ class ControlSmartWatch2 extends ControlExtension {
             Names.INPUT2,
             Names.INPUT3,
             Names.INPUT4,
-            Names.AZ
+            Names.AZ,
+            Names.DOORS_4,
+            Names.DOOR_BL,
+            Names.DOOR_BR,
+            Names.DOOR_FL,
+            Names.DOOR_FR
     };
     static final int[] menu_items = {
             R.string.motor_on,
@@ -114,6 +119,13 @@ class ControlSmartWatch2 extends ControlExtension {
     ControlSmartWatch2(final String hostAppPackageName, final Context context,
                        Handler handler) {
         super(context, hostAppPackageName);
+        Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+            @Override
+            public void uncaughtException(Thread thread, Throwable ex) {
+                State.print(ex);
+                System.exit(1);
+            }
+        });
         if (handler == null) {
             throw new IllegalArgumentException("handler == null");
         }
@@ -146,13 +158,10 @@ class ControlSmartWatch2 extends ControlExtension {
 
     private void initializeMenus(Context context) {
         for (int i = 0; i < menu_items.length; i++) {
-
             mMenuItemsText[i] = new Bundle();
             mMenuItemsText[i].putInt(Control.Intents.EXTRA_MENU_ITEM_ID, MENU_ITEM_MOTOR_ON);
             mMenuItemsText[i].putString(Control.Intents.EXTRA_MENU_ITEM_TEXT, context.getString(menu_items[i]));
-
         }
-
     }
 
     @Override
