@@ -15,4 +15,5 @@
     <string name="valet_on">Valet ON</string>
     <string name="valet_off">Valet OFF</string>
     <string name="rub">R</string>
+    <string name="refresh">Refresh</string>
 </resources>

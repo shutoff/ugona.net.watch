@@ -85,16 +85,17 @@ class ControlSmartWatch2 extends ControlExtension {
     };
     static final int[] menu_items = {
             R.string.motor_on,
-            R.string.motor_off
+            R.string.motor_off,
+            R.string.refresh
     };
     static final String[] menu_actions = {
             "motor_on",
-            "motor_off"
+            "motor_off",
+            "refresh"
     };
     private static final int MENU_ITEM_MOTOR_ON = 0;
     private static final int MENU_ITEM_MOTOR_OFF = 1;
-    private static final int MENU_ITEM_VALET_ON = 2;
-    private static final int MENU_ITEM_VALET_OFF = 3;
+    private static final int REFRESH = 2;
     Bundle[] mMenuItemsText = new Bundle[menu_items.length];
     CarDrawable carDrawable;
     String car_id;
@@ -282,14 +283,11 @@ class ControlSmartWatch2 extends ControlExtension {
         View layout = inflater.inflate(R.layout.control_2
                 , null);
         mLayout = (ControlViewGroup) parseLayout(layout);
-        ControlView v = mLayout.findViewById(R.id.time);
+        ControlView v = mLayout.findViewById(R.id.data);
         v.setOnClickListener(new ControlView.OnClickListener() {
             @Override
             public void onClick() {
-                Intent i = new Intent("net.ugona.plus.ACTION");
-                i.putExtra(Names.ID, car_id);
-                i.putExtra("ACTION", "refresh");
-                mContext.sendBroadcast(i);
+                showMenu(mMenuItemsText);
             }
         });
     }

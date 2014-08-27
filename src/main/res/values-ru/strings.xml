@@ -15,4 +15,5 @@
     <string name="valet_on">Включить режим сервис</string>
     <string name="valet_off">Выключить режим сервис</string>
     <string name="rub">Р</string>
+    <string name="refresh">Обновить</string>
 </resources>
